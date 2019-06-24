@@ -57,6 +57,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -245,6 +246,26 @@ public class QueryBasicTest extends HazelcastTestSupport {
         Collection<Object> values = map.values(linkedListPredicate);
         assertEquals(1, values.size());
         assertContains(values, linkedList);
+    }
+
+    @Test(timeout = 1000 * 90)
+    public void testLinearizability() {
+        HazelcastInstance instance = createHazelcastInstance(getConfig());
+        IMap<Integer, Object> map = instance.getMap("testLinearizability");
+
+        LinkedList linkedList = new LinkedList();
+        ArrayList arrayList = new ArrayList();
+
+        Predicate linkedListPredicate = Predicates.instanceOf(LinkedList.class);
+        map.put(1, linkedList);
+
+        for (int i = 0; i < 10000000; ++i) {
+            boolean isLinkedList = new Random().nextBoolean();
+            map.replace(1, isLinkedList ? linkedList : arrayList);
+            Collection<Object> values = map.values(linkedListPredicate);
+            assertEquals(isLinkedList ? 1 : 0, map.values(linkedListPredicate).size());
+            //System.err.println("Passed iteration i=" + i);
+        }
     }
 
     @Test(timeout = 1000 * 90)
