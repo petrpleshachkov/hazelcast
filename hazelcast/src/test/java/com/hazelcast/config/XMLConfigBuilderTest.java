@@ -39,6 +39,7 @@ import org.junit.runner.RunWith;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
@@ -60,6 +61,7 @@ import static com.hazelcast.config.PermissionConfig.PermissionType.CONFIG;
 import static com.hazelcast.config.RestEndpointGroup.CLUSTER_READ;
 import static com.hazelcast.config.RestEndpointGroup.HEALTH_CHECK;
 import static com.hazelcast.config.WANQueueFullBehavior.DISCARD_AFTER_MUTATION;
+import static com.hazelcast.config.XmlYamlConfigBuilderEqualsTest.readResourceToString;
 import static java.io.File.createTempFile;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -3202,6 +3204,26 @@ public class XMLConfigBuilderTest extends AbstractConfigBuilderTest {
 
         expected.expect(InvalidConfigurationException.class);
         buildConfig(xml);
+    }
+
+    @Test
+    public void testOptaneDirectoryConfiguration() throws IOException {
+        String fullExampleXml = readResourceToString("hazelcast-full-example.xml");
+        String fullExampleYaml = readResourceToString("hazelcast-full-example.yaml");
+
+
+        // remove imports to prevent the test from failing with importing non-existing files
+        fullExampleXml = fullExampleXml.replace("<import resource=\"your-configuration-XML-file\"/>", "");
+        fullExampleYaml = fullExampleYaml
+                .replace("\r", "")
+                .replace("import:\n    - your-configuration-YAML-file", "");
+
+
+        Config xmlConfig = new InMemoryXmlConfig(fullExampleXml);
+        Config yamlConfig = new InMemoryYamlConfig(fullExampleYaml);
+
+        assertEquals("/mnt/optane", xmlConfig.getNativeMemoryConfig().getPersistentMemoryDirectory());
+        assertEquals("/mnt/optane", yamlConfig.getNativeMemoryConfig().getPersistentMemoryDirectory());
     }
 
     @Override
