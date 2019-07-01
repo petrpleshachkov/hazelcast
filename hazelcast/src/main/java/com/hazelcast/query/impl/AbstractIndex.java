@@ -56,6 +56,7 @@ public abstract class AbstractIndex implements InternalIndex {
     private final String name;
     private final String[] components;
     private final boolean ordered;
+    private final int kgram;
     private final PerIndexStats stats;
 
     /**
@@ -66,21 +67,22 @@ public abstract class AbstractIndex implements InternalIndex {
     private volatile TypeConverter converter;
 
     @SuppressFBWarnings("EI_EXPOSE_REP2")
-    public AbstractIndex(String name, String[] components, boolean ordered, InternalSerializationService ss,
+    public AbstractIndex(String name, String[] components, boolean ordered, int kgram, InternalSerializationService ss,
                          Extractors extractors, IndexCopyBehavior copyBehavior, PerIndexStats stats,
                          StoreAdapter partitionStoreAdapter) {
         this.name = name;
         this.components = components;
         this.ordered = ordered;
+        this.kgram = kgram;
         this.ss = ss;
         this.extractors = extractors;
         this.copyBehavior = copyBehavior;
         this.partitionStoreAdapter = partitionStoreAdapter;
-        this.indexStore = createIndexStore(ordered, stats);
+        this.indexStore = createIndexStore(ordered, kgram, stats);
         this.stats = stats;
     }
 
-    protected abstract IndexStore createIndexStore(boolean ordered, PerIndexStats stats);
+    protected abstract IndexStore createIndexStore(boolean ordered, int kgram, PerIndexStats stats);
 
     @Override
     public String getName() {
@@ -96,6 +98,11 @@ public abstract class AbstractIndex implements InternalIndex {
     @Override
     public boolean isOrdered() {
         return ordered;
+    }
+
+    @Override
+    public int getkgram() {
+        return kgram;
     }
 
     @Override
@@ -157,6 +164,12 @@ public abstract class AbstractIndex implements InternalIndex {
         stats.onIndexHit(timestamp, result.size());
         return result;
     }
+
+    @Override
+    public Set<Comparable> getTerms(String kgram) {
+        return indexStore.getTerms(kgram);
+    }
+
 
     @Override
     public Set<QueryableEntry> getRecords(Comparable[] values) {

@@ -34,6 +34,7 @@ import com.hazelcast.query.impl.predicates.PartitionPredicateImpl;
 import com.hazelcast.query.impl.predicates.RegexPredicate;
 import com.hazelcast.query.impl.predicates.SqlPredicate;
 import com.hazelcast.query.impl.predicates.TruePredicate;
+import com.hazelcast.query.impl.predicates.WildcardPredicate;
 
 import java.util.Comparator;
 import java.util.Date;
@@ -460,6 +461,10 @@ public final class Predicates {
      */
     public static Predicate sql(String expression) {
         return new SqlPredicate(expression);
+    }
+
+    public static Predicate wildcard(String attribute, String expression) {
+        return new WildcardPredicate(attribute, expression);
     }
 
     /**

@@ -195,6 +195,11 @@ public class AttributeIndexRegistry {
         }
 
         @Override
+        public int getkgram() {
+            return delegate.getkgram();
+        }
+
+        @Override
         public TypeConverter getConverter() {
             CompositeConverter converter = (CompositeConverter) delegate.getConverter();
             return converter == null ? null : converter.getComponentConverter(0);
@@ -215,6 +220,11 @@ public class AttributeIndexRegistry {
             Comparable from = new CompositeValue(width, value, NEGATIVE_INFINITY);
             Comparable to = new CompositeValue(width, value, POSITIVE_INFINITY);
             return delegate.getRecords(from, false, to, false);
+        }
+
+        @Override
+        public Set<Comparable> getTerms(String kgram) {
+            return delegate.getTerms(kgram);
         }
 
         @SuppressWarnings("checkstyle:npathcomplexity")

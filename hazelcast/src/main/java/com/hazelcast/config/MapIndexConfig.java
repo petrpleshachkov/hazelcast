@@ -38,6 +38,7 @@ public class MapIndexConfig implements IdentifiedDataSerializable {
 
     private String attribute;
     private boolean ordered;
+    private int kgram;
     private transient MapIndexConfigReadOnly readOnly;
 
     /**
@@ -122,6 +123,15 @@ public class MapIndexConfig implements IdentifiedDataSerializable {
         return this;
     }
 
+    public int getKgram() {
+        return kgram;
+    }
+
+    public MapIndexConfig setKgram(int kgram) {
+        this.kgram = kgram;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "MapIndexConfig{attribute='" + attribute + "', ordered=" + ordered + '}';
@@ -159,12 +169,14 @@ public class MapIndexConfig implements IdentifiedDataSerializable {
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeUTF(attribute);
         out.writeBoolean(ordered);
+        out.writeInt(kgram);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         attribute = in.readUTF();
         ordered = in.readBoolean();
+        kgram = in.readInt();
     }
 
     @Override
@@ -180,6 +192,9 @@ public class MapIndexConfig implements IdentifiedDataSerializable {
         if (ordered != that.ordered) {
             return false;
         }
+        if (kgram != that.kgram) {
+            return false;
+        }
         return attribute != null ? attribute.equals(that.attribute) : that.attribute == null;
     }
 
@@ -187,6 +202,7 @@ public class MapIndexConfig implements IdentifiedDataSerializable {
     public final int hashCode() {
         int result = attribute != null ? attribute.hashCode() : 0;
         result = 31 * result + (ordered ? 1 : 0);
+        result = 31 * result + Integer.hashCode(kgram);
         return result;
     }
 }

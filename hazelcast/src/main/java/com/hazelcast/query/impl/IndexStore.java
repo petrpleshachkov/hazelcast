@@ -109,14 +109,17 @@ public interface IndexStore {
      */
     Set<QueryableEntry> getRecords(Comparable value);
 
-    /**
-     * Obtains entries that have indexed attribute value equal to one of the
-     * given set of values.
-     *
-     * @param values the values to obtains the entries for.
-     * @return the obtained entries.
-     * @see Index#getRecords(Comparable[])
-     */
+    Set<Comparable> getTerms(String kgram);
+
+
+        /**
+         * Obtains entries that have indexed attribute value equal to one of the
+         * given set of values.
+         *
+         * @param values the values to obtains the entries for.
+         * @return the obtained entries.
+         * @see Index#getRecords(Comparable[])
+         */
     Set<QueryableEntry> getRecords(Set<Comparable> values);
 
     /**

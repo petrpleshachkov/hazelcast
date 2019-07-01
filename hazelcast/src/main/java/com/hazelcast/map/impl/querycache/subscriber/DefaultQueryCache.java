@@ -453,11 +453,11 @@ class DefaultQueryCache<K, V> extends AbstractInternalQueryCache<K, V> {
     }
 
     @Override
-    public void addIndex(String attribute, boolean ordered) {
+    public void addIndex(String attribute, boolean ordered, int kgram) {
         checkNotNull(attribute, "attribute cannot be null");
 
         assert indexes.isGlobal();
-        getIndexes().addOrGetIndex(attribute, ordered, null);
+        getIndexes().addOrGetIndex(attribute, ordered, kgram, null);
 
         InternalSerializationService serializationService = context.getSerializationService();
 

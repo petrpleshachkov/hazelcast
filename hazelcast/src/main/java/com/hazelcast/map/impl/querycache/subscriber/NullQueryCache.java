@@ -129,7 +129,7 @@ public final class NullQueryCache implements InternalQueryCache {
     }
 
     @Override
-    public void addIndex(String attribute, boolean ordered) {
+    public void addIndex(String attribute, boolean ordered, int kgram) {
     }
 
     @Override

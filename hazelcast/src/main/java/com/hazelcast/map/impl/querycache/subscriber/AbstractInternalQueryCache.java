@@ -88,7 +88,7 @@ abstract class AbstractInternalQueryCache<K, V> implements InternalQueryCache<K,
 
         assert indexes.isGlobal();
         for (MapIndexConfig indexConfig : queryCacheConfig.getIndexConfigs()) {
-            indexes.addOrGetIndex(indexConfig.getAttribute(), indexConfig.isOrdered(), null);
+            indexes.addOrGetIndex(indexConfig.getAttribute(), indexConfig.isOrdered(), indexConfig.getKgram(), null);
         }
     }
 

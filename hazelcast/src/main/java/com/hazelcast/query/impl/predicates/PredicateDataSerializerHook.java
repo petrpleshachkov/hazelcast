@@ -50,11 +50,13 @@ public class PredicateDataSerializerHook implements DataSerializerHook {
     public static final int PAGING_PREDICATE = 15;
     public static final int PARTITION_PREDICATE = 16;
     public static final int NULL_OBJECT = 17;
+    public static final int WILDCARD_PREDICATE = 18;
     // Objects corresponding to the 3 entries bellow are never transferred over
     // the wire.
-    public static final int COMPOSITE_VALUE = 18;
-    public static final int NEGATIVE_INFINITY = 19;
-    public static final int POSITIVE_INFINITY = 20;
+    public static final int COMPOSITE_VALUE = 19;
+    public static final int NEGATIVE_INFINITY = 20;
+    public static final int POSITIVE_INFINITY = 21;
+
 
     public static final int LEN = POSITIVE_INFINITY + 1;
 
@@ -155,6 +157,11 @@ public class PredicateDataSerializerHook implements DataSerializerHook {
         constructors[NULL_OBJECT] = new ConstructorFunction<Integer, IdentifiedDataSerializable>() {
             public IdentifiedDataSerializable createNew(Integer arg) {
                 return IndexImpl.NULL;
+            }
+        };
+        constructors[WILDCARD_PREDICATE] = new ConstructorFunction<Integer, IdentifiedDataSerializable>() {
+            public IdentifiedDataSerializable createNew(Integer arg) {
+                return new WildcardPredicate();
             }
         };
         constructors[COMPOSITE_VALUE] = new ConstructorFunction<Integer, IdentifiedDataSerializable>() {

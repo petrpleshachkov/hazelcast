@@ -116,7 +116,7 @@ public interface QueryCache<K, V> {
     /**
      * @see IMap#addIndex(String, boolean)
      */
-    void addIndex(String attribute, boolean ordered);
+    void addIndex(String attribute, boolean ordered, int kgram);
 
     /**
      * @see IMap#getAll(Set)

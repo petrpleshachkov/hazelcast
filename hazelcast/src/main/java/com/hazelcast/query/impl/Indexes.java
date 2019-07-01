@@ -118,10 +118,11 @@ public class Indexes {
      *                canonicalizes it.
      * @param ordered {@code true} if the new index should be ordered, {@code
      *                false} otherwise.
+     * @param kgram   TODO: javadoc
      * @param partitionStoreAdapter the reference to the store adapter. {@code null} if the index is global.
      * @return the existing or created index.
      */
-    public synchronized InternalIndex addOrGetIndex(String name, boolean ordered, StoreAdapter partitionStoreAdapter) {
+    public synchronized InternalIndex addOrGetIndex(String name, boolean ordered, int kgram, StoreAdapter partitionStoreAdapter) {
         InternalIndex index = indexesByName.get(name);
         if (index != null) {
             return index;
@@ -139,8 +140,8 @@ public class Indexes {
             return index;
         }
 
-        index = indexProvider.createIndex(name, components, ordered, extractors, serializationService, indexCopyBehavior,
-                stats.createPerIndexStats(ordered, usesCachedQueryableEntries), partitionStoreAdapter);
+        index = indexProvider.createIndex(name, components, ordered, kgram, extractors, serializationService,
+                indexCopyBehavior, stats.createPerIndexStats(ordered, usesCachedQueryableEntries), partitionStoreAdapter);
 
         indexesByName.put(name, index);
         attributeIndexRegistry.register(index);
@@ -191,7 +192,7 @@ public class Indexes {
      */
     public void createIndexesFromRecordedDefinitions(StoreAdapter partitionStoreAdapter) {
         for (Map.Entry<String, Boolean> definition : definitions.entrySet()) {
-            addOrGetIndex(definition.getKey(), definition.getValue(), partitionStoreAdapter);
+            addOrGetIndex(definition.getKey(), definition.getValue(), 0, partitionStoreAdapter);
         }
         definitions.clear();
     }

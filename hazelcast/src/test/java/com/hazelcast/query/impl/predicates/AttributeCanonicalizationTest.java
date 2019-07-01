@@ -103,7 +103,7 @@ public class AttributeCanonicalizationTest {
         indexes.destroyIndexes();
         assertFalse(indexes.haveAtLeastOneIndex());
 
-        InternalIndex index = indexes.addOrGetIndex(name, false, null);
+        InternalIndex index = indexes.addOrGetIndex(name, false, 0, null);
         assertEquals(expected, index.getName());
 
         assertNotNull(indexes.getIndex(expected));

@@ -36,6 +36,7 @@ public interface IndexProvider {
      * @param ordered      {@code true} to create an ordered index supporting
      *                     fast range queries, {@code false} to create an
      *                     unordered index supporting fast point queries only.
+     * @param kgram
      * @param extractors   the extractors to extract values of the given
      *                     name.
      * @param ss           the serialization service to perform the
@@ -46,7 +47,7 @@ public interface IndexProvider {
      * @param storeAdapter the reference to the store adapter. {@code null} if the index is global.
      * @return the created index instance.
      */
-    InternalIndex createIndex(String name, String[] components, boolean ordered, Extractors extractors,
+    InternalIndex createIndex(String name, String[] components, boolean ordered, int kgram, Extractors extractors,
                               InternalSerializationService ss, IndexCopyBehavior copyBehavior, PerIndexStats stats,
                               StoreAdapter storeAdapter);
 

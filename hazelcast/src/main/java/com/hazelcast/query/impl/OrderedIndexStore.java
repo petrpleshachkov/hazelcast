@@ -20,6 +20,7 @@ import com.hazelcast.nio.serialization.Data;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -27,6 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import static com.hazelcast.query.impl.AbstractIndex.NULL;
+import static com.hazelcast.query.impl.predicates.WildcardPredicate.generateKGrams;
+import static com.hazelcast.query.impl.predicates.WildcardPredicate.generateKGramsWithStartEndMarker;
 import static java.util.Collections.emptySet;
 
 /**
@@ -42,9 +45,18 @@ public class OrderedIndexStore extends BaseIndexStore {
 
     private volatile Map<Data, QueryableEntry> recordsWithNullValue;
 
-    public OrderedIndexStore(IndexCopyBehavior copyOn) {
+    // Maps a kgram to the set of terms
+    private final ConcurrentSkipListMap<Comparable, Set<Comparable>> kgramMap =
+            new ConcurrentSkipListMap<Comparable, Set<Comparable>>(Comparables.COMPARATOR);
+
+    private final int maxKgramSize;
+
+    public OrderedIndexStore(IndexCopyBehavior copyOn, int kgram) {
         super(copyOn);
         assert copyOn != null;
+        assert kgram >= 2;
+        this.maxKgramSize = kgram;
+
         if (copyOn == IndexCopyBehavior.COPY_ON_WRITE) {
             addFunctor = new CopyOnWriteAddFunctor();
             removeFunctor = new CopyOnWriteRemoveFunctor();
@@ -106,6 +118,18 @@ public class OrderedIndexStore extends BaseIndexStore {
             releaseReadLock();
         }
     }
+
+    @Override
+    public Set<Comparable> getTerms(String kgram) {
+        assert kgram != null && !kgram.isEmpty();
+        takeReadLock();
+        try {
+            return kgramMap.get(kgram);
+        } finally {
+            releaseReadLock();
+        }
+    }
+
 
     @Override
     public Set<QueryableEntry> getRecords(Set<Comparable> values) {
@@ -205,6 +229,20 @@ public class OrderedIndexStore extends BaseIndexStore {
             if (value == NULL) {
                 return recordsWithNullValue.put(entry.getKeyData(), entry);
             } else {
+                // Update kgram index
+                Set<Comparable> valueKGrams = new HashSet<>();
+                generateKGramsWithStartEndMarker(value, 2, maxKgramSize, valueKGrams);
+
+                for (Comparable kgram : valueKGrams) {
+                    Set<Comparable> terms = kgramMap.get(kgram);
+                    if (terms == null) {
+                        terms = new HashSet<Comparable>();
+                        kgramMap.put(kgram, terms);
+                    }
+                    terms.add(value);
+                }
+
+                // Update main index
                 Map<Data, QueryableEntry> records = recordMap.get(value);
                 if (records == null) {
                     records = new ConcurrentHashMap<Data, QueryableEntry>(1, LOAD_FACTOR, 1);
@@ -215,6 +253,8 @@ public class OrderedIndexStore extends BaseIndexStore {
         }
 
     }
+
+
 
     /**
      * Adds entry to the given index map copying it to secure exclusive access.
@@ -266,6 +306,21 @@ public class OrderedIndexStore extends BaseIndexStore {
                     oldValue = records.remove(indexKey);
                     if (records.size() == 0) {
                         recordMap.remove(value);
+                    }
+
+                    // Update kgram index
+                    Set<Comparable> valueKGrams = new HashSet<>();
+                    generateKGramsWithStartEndMarker(value, 2, maxKgramSize, valueKGrams);
+
+
+                    for (Comparable kgram : valueKGrams) {
+                        Set<Comparable> terms = kgramMap.get(kgram);
+                        if (terms != null) {
+                            terms.remove(value);
+                            if (terms.isEmpty()) {
+                                kgramMap.remove(kgram);
+                            }
+                        }
                     }
                 } else {
                     oldValue = null;

@@ -135,6 +135,11 @@ public class UnorderedIndexStore extends BaseIndexStore {
     }
 
     @Override
+    public Set<Comparable> getTerms(String kgram) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public Set<QueryableEntry> getRecords(Set<Comparable> values) {
         takeReadLock();
         try {

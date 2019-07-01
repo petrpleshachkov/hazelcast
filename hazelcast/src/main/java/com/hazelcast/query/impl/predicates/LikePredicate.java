@@ -59,7 +59,7 @@ public class LikePredicate extends AbstractPredicate {
         return m.matches();
     }
 
-    private Pattern createPattern(String expression) {
+    Pattern createPattern(String expression) {
         // we quote the input string then escape then replace % and _
         // at the end we have a regex pattern look like: \QSOME_STRING\E.*\QSOME_OTHER_STRING\E
         final String quotedExpression = Pattern.quote(expression);

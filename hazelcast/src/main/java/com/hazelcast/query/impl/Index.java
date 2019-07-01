@@ -59,6 +59,12 @@ public interface Index {
     boolean isOrdered();
 
     /**
+     * TODO
+     * @return
+     */
+    int getkgram();
+
+    /**
      * @return the converter associated with this index; or {@code null} if the
      * converter is not known because there were no saves to this index and
      * the attribute type is not inferred yet.
@@ -96,6 +102,8 @@ public interface Index {
      * @return the produced result set.
      */
     Set<QueryableEntry> getRecords(Comparable value);
+
+    Set<Comparable> getTerms(String kgram);
 
     /**
      * Produces a result set containing entries whose attribute values are equal

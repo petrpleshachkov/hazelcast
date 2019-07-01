@@ -156,7 +156,7 @@ public class MapReplicationStateHolder implements IdentifiedDataSerializable {
                         .getPartitionContainer(operation.getPartitionId());
                 for (Map.Entry<String, Boolean> indexDefinition : mapContainer.getIndexDefinitions().entrySet()) {
                     Indexes indexes = mapContainer.getIndexes(partitionContainer.getPartitionId());
-                    indexes.addOrGetIndex(indexDefinition.getKey(), indexDefinition.getValue(),
+                    indexes.addOrGetIndex(indexDefinition.getKey(), indexDefinition.getValue(), 0,
                             indexes.isGlobal() ? null : storeAdapter);
                 }
 
@@ -226,14 +226,14 @@ public class MapReplicationStateHolder implements IdentifiedDataSerializable {
 
                 // optimisation not to synchronize each partition thread on the addOrGetIndex method
                 if (indexes.getIndex(indexInfo.getName()) == null) {
-                    indexes.addOrGetIndex(indexInfo.getName(), indexInfo.isOrdered(), recordStoreAdapter);
+                    indexes.addOrGetIndex(indexInfo.getName(), indexInfo.isOrdered(), indexInfo.getKgram(), recordStoreAdapter);
                 }
             }
         } else {
             Indexes indexes = mapContainer.getIndexes(operation.getPartitionId());
             StoreAdapter recordStoreAdapter = indexes.isGlobal() ? null : new RecordStoreAdapter(recordStore);
             for (IndexInfo indexInfo : indexInfos) {
-                indexes.addOrGetIndex(indexInfo.getName(), indexInfo.isOrdered(), recordStoreAdapter);
+                indexes.addOrGetIndex(indexInfo.getName(), indexInfo.isOrdered(), indexInfo.getKgram(), recordStoreAdapter);
             }
         }
     }

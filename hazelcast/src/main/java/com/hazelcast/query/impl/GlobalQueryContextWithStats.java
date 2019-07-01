@@ -105,6 +105,11 @@ public class GlobalQueryContextWithStats extends QueryContext {
         }
 
         @Override
+        public int getkgram() {
+            return delegate.getkgram();
+        }
+
+        @Override
         public TypeConverter getConverter() {
             return delegate.getConverter();
         }
@@ -124,6 +129,11 @@ public class GlobalQueryContextWithStats extends QueryContext {
             Set<QueryableEntry> result = delegate.getRecords(value);
             hasQueries = true;
             return result;
+        }
+
+        @Override
+        public Set<Comparable> getTerms(String kgram) {
+            return delegate.getTerms(kgram);
         }
 
         @Override

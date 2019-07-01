@@ -27,6 +27,7 @@ public class IndexInfo implements IdentifiedDataSerializable, Comparable<IndexIn
 
     private String name;
     private boolean ordered;
+    private int kgram;
 
     public IndexInfo() {
     }
@@ -40,12 +41,14 @@ public class IndexInfo implements IdentifiedDataSerializable, Comparable<IndexIn
     public void writeData(ObjectDataOutput out) throws IOException {
         out.writeUTF(name);
         out.writeBoolean(ordered);
+        out.writeInt(kgram);
     }
 
     @Override
     public void readData(ObjectDataInput in) throws IOException {
         name = in.readUTF();
         ordered = in.readBoolean();
+        kgram = in.readInt();
     }
 
     public String getName() {
@@ -54,6 +57,10 @@ public class IndexInfo implements IdentifiedDataSerializable, Comparable<IndexIn
 
     public boolean isOrdered() {
         return ordered;
+    }
+
+    public int getKgram() {
+        return kgram;
     }
 
     @Override
