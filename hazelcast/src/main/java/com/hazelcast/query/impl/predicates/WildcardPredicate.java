@@ -84,9 +84,14 @@ public final class WildcardPredicate extends AbstractIndexAwarePredicate {
 
         String[] terms = useExpressionBuilder.toString().split("\\*");
 
+        if (terms.length == 0) {
+            throw new UnsupportedOperationException("Query '" + expression + "' is not supported");
+        }
+
         Set<Comparable> ret = new HashSet<>();
         for (int i = 0; i < terms.length; ++i) {
-            generateKGrams(terms[i], minKGmarSize, maxKGramSize, ret);
+            int useKgramSize = terms[i].length() > maxKGramSize ? maxKGramSize : terms[i].length();
+            generateKGrams(terms[i], useKgramSize, useKgramSize, ret);
         }
         return ret;
     }

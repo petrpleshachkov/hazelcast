@@ -199,21 +199,4 @@ public class IndexesTest {
         assertSame(index, indexes.addOrGetIndex("this.a, b", false, 0, null));
     }
 
-    @Test
-    public void testKgramIndex() {
-        Indexes indexes = Indexes.newBuilder(serializationService, copyBehavior).build();
-        indexes.addOrGetIndex("name", true, 2, null);
-        for (int i = 0; i < 200; i++) {
-            Employee employee = new Employee(i + "NaABCme", i % 80, (i % 2 == 0), 100 + (i % 100));
-            indexes.putEntry(new QueryEntry(serializationService, toData(i), employee, newExtractor()), null,
-                    Index.OperationSource.USER);
-        }
-
-        for (int i = 0; i < 10; i++) {
-            Predicate predicate = Predicates.wildcard("name", "*Na*me");
-            Set<QueryableEntry> results = new HashSet<>(indexes.query(predicate));
-            assertEquals(200, results.size());
-        }
-    }
-
 }
