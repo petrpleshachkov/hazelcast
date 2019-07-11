@@ -1,7 +1,11 @@
 package com.hazelcast.query.impl;
 
+import com.hazelcast.config.Config;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.internal.json.RandomPrint;
 import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.serialization.impl.DefaultSerializationServiceBuilder;
+import com.hazelcast.map.IMap;
 import com.hazelcast.query.Predicate;
 import com.hazelcast.query.Predicates;
 import com.hazelcast.query.SampleTestObjects;
@@ -10,27 +14,43 @@ import com.hazelcast.test.HazelcastParallelParametersRunnerFactory;
 import com.hazelcast.test.HazelcastTestSupport;
 import com.hazelcast.test.annotation.ParallelJVMTest;
 import com.hazelcast.test.annotation.QuickTest;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runners.Parameterized;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Random;
 
 import static com.hazelcast.instance.impl.TestUtil.toData;
 import static org.junit.Assert.assertEquals;
+import static com.hazelcast.query.SampleTestObjects.Employee;
 
 @Parameterized.UseParametersRunnerFactory(HazelcastParallelParametersRunnerFactory.class)
 @Category({QuickTest.class, ParallelJVMTest.class})
 public class KgramIndexTest extends HazelcastTestSupport {
 
     private final InternalSerializationService serializationService = new DefaultSerializationServiceBuilder().build();
+    private Indexes indexes;
+    IMap<Integer, SampleTestObjects.Employee> map;
+/*
+    @Before
+    public void setUp() {
+        indexes = Indexes.newBuilder(serializationService, IndexCopyBehavior.COPY_ON_READ).build();
+        indexes.addOrGetIndex("name", true, 3, null);
+    }*/
+
+
+    @Before
+    public void setUp() {
+        Config config = getConfig();
+        HazelcastInstance node = createHazelcastInstance(config);
+        map = node.getMap("testMap");
+        map.addIndex("name", true, 3);
+
+    }
 
     @Test
     public void testKgramIndex() {
-        Indexes indexes = Indexes.newBuilder(serializationService, IndexCopyBehavior.COPY_ON_READ).build();
-        indexes.addOrGetIndex("name", true, 3, null);
-
 
         SampleTestObjects.Employee employee1 = new SampleTestObjects.Employee("Foo", 50, true, 100);
         indexes.putEntry(new QueryEntry(serializationService, toData(1), employee1, newExtractor()), null,
@@ -65,6 +85,13 @@ public class KgramIndexTest extends HazelcastTestSupport {
 
         Predicate predicate8 = Predicates.wildcard("name", "*ooBa*rr");
         assertEquals(0, indexes.query(predicate8).size());
+
+        // TODO: check post filetering, red*, retired
+    }
+
+    @Test
+    public void testEmptyResult() {
+        // TODO check the performance if there is no result
     }
 
     private Extractors newExtractor() {

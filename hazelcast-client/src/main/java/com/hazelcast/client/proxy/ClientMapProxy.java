@@ -1419,6 +1419,11 @@ public class ClientMapProxy<K, V> extends ClientProxy
 
     @Override
     public void addIndex(@Nonnull String attribute, boolean ordered) {
+        addIndex(attribute, ordered, 0);
+    }
+
+    @Override
+    public void addIndex(@Nonnull String attribute, boolean ordered, int kGramSize) {
         validateIndexAttribute(attribute);
         ClientMessage request = MapAddIndexCodec.encodeRequest(name, attribute, ordered);
         invoke(request);

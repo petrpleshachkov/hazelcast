@@ -54,7 +54,7 @@ public class OrderedIndexStore extends BaseIndexStore {
     public OrderedIndexStore(IndexCopyBehavior copyOn, int kgram) {
         super(copyOn);
         assert copyOn != null;
-        assert kgram >= 2;
+        assert kgram >= 2 || kgram ==0;
         this.maxKgramSize = kgram;
 
         if (copyOn == IndexCopyBehavior.COPY_ON_WRITE) {

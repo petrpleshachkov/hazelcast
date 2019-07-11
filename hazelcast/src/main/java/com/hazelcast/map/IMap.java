@@ -2589,6 +2589,9 @@ public interface IMap<K, V> extends ConcurrentMap<K, V>, BaseMap<K, V> {
      */
     void addIndex(@Nonnull String attribute, boolean ordered);
 
+    void addIndex(@Nonnull String attribute, boolean ordered, int kGramSize);
+
+
     /**
      * Returns LocalMapStats for this map.
      * <p>

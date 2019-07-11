@@ -50,7 +50,7 @@ public final class WildcardPredicate extends AbstractIndexAwarePredicate {
     public Set<QueryableEntry> filter(QueryContext queryContext) {
         Index index = matchIndex(queryContext, QueryContext.IndexMatchHint.PREFER_UNORDERED);
         Set<Comparable> searchTerms = null;
-        for (Comparable kgram : generateKGramsFromQuery(expression, 2, index.getkgram())) {
+        for (Comparable kgram : generateKGramsFromQuery(expression, index.getkgram())) {
             Set<Comparable> terms = index.getTerms((String) kgram);
             if (terms == null) {
                 return Collections.emptySet();
@@ -70,7 +70,7 @@ public final class WildcardPredicate extends AbstractIndexAwarePredicate {
         return new OrResultSet(indexedResults);
     }
 
-    private static Set<Comparable> generateKGramsFromQuery(String expression, int minKGmarSize, int maxKGramSize) {
+    private static Set<Comparable> generateKGramsFromQuery(String expression, int maxKGramSize) {
         StringBuilder useExpressionBuilder = new StringBuilder();
         if (!expression.startsWith("*")) {
             // no leading wildcard

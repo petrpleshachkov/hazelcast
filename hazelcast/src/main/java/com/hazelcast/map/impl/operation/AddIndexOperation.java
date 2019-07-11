@@ -42,15 +42,16 @@ public class AddIndexOperation extends MapOperation implements PartitionAwareOpe
 
     private String attributeName;
     private boolean ordered;
-    private int kgram;
+    private int kgramSize;
 
     public AddIndexOperation() {
     }
 
-    public AddIndexOperation(String name, String attributeName, boolean ordered) {
+    public AddIndexOperation(String name, String attributeName, boolean ordered, int kgramSize) {
         super(name);
         this.attributeName = attributeName;
         this.ordered = ordered;
+        this.kgramSize = kgramSize;
     }
 
     @Override
@@ -84,7 +85,7 @@ public class AddIndexOperation extends MapOperation implements PartitionAwareOpe
 
         Indexes indexes = mapContainer.getIndexes(partitionId);
         RecordStoreAdapter recordStoreAdapter = new RecordStoreAdapter(recordStore);
-        InternalIndex index = indexes.addOrGetIndex(attributeName, ordered, kgram, indexes.isGlobal() ? null : recordStoreAdapter);
+        InternalIndex index = indexes.addOrGetIndex(attributeName, ordered, kgramSize, indexes.isGlobal() ? null : recordStoreAdapter);
         if (index.hasPartitionIndexed(partitionId)) {
             return;
         }
@@ -119,6 +120,7 @@ public class AddIndexOperation extends MapOperation implements PartitionAwareOpe
         super.writeInternal(out);
         out.writeUTF(attributeName);
         out.writeBoolean(ordered);
+        out.writeInt(kgramSize);
     }
 
     @Override
@@ -126,6 +128,7 @@ public class AddIndexOperation extends MapOperation implements PartitionAwareOpe
         super.readInternal(in);
         attributeName = in.readUTF();
         ordered = in.readBoolean();
+        kgramSize = in.readInt();
     }
 
     @Override

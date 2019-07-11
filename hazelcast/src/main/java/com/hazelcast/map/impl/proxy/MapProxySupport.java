@@ -1245,14 +1245,20 @@ abstract class MapProxySupport<K, V>
 
     @Override
     public void addIndex(@Nonnull String attribute, boolean ordered) {
+        addIndex(attribute, ordered, 0);
+    }
+
+    @Override
+    public void addIndex(@Nonnull String attribute, boolean ordered, int kGramSize) {
         validateIndexAttribute(attribute);
         try {
-            AddIndexOperation addIndexOperation = new AddIndexOperation(name, attribute, ordered);
+            AddIndexOperation addIndexOperation = new AddIndexOperation(name, attribute, ordered, kGramSize);
             operationService.invokeOnAllPartitions(SERVICE_NAME, new BinaryOperationFactory(addIndexOperation, getNodeEngine()));
         } catch (Throwable t) {
             throw rethrow(t);
         }
     }
+
 
     @Override
     public LocalMapStats getLocalMapStats() {

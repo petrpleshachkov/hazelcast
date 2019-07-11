@@ -40,7 +40,7 @@ public class AddIndexOperationFactory extends AbstractMapOperationFactory {
 
     @Override
     public Operation createOperation() {
-        return new AddIndexOperation(name, attributeName, ordered);
+        return new AddIndexOperation(name, attributeName, ordered, 0);
     }
 
     @Override
