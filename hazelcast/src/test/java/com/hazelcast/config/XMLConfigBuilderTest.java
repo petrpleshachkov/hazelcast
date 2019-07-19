@@ -3206,26 +3206,6 @@ public class XMLConfigBuilderTest extends AbstractConfigBuilderTest {
         buildConfig(xml);
     }
 
-    @Test
-    public void testOptaneDirectoryConfiguration() throws IOException {
-        String fullExampleXml = readResourceToString("hazelcast-full-example.xml");
-        String fullExampleYaml = readResourceToString("hazelcast-full-example.yaml");
-
-
-        // remove imports to prevent the test from failing with importing non-existing files
-        fullExampleXml = fullExampleXml.replace("<import resource=\"your-configuration-XML-file\"/>", "");
-        fullExampleYaml = fullExampleYaml
-                .replace("\r", "")
-                .replace("import:\n    - your-configuration-YAML-file", "");
-
-
-        Config xmlConfig = new InMemoryXmlConfig(fullExampleXml);
-        Config yamlConfig = new InMemoryYamlConfig(fullExampleYaml);
-
-        assertEquals("/mnt/optane", xmlConfig.getNativeMemoryConfig().getPersistentMemoryDirectory());
-        assertEquals("/mnt/optane", yamlConfig.getNativeMemoryConfig().getPersistentMemoryDirectory());
-    }
-
     @Override
     public void testWhitespaceInNonSpaceStrings() {
         String xml = HAZELCAST_START_TAG
@@ -3233,6 +3213,20 @@ public class XMLConfigBuilderTest extends AbstractConfigBuilderTest {
                 + HAZELCAST_END_TAG;
         buildConfig(xml);
     }
+
+    @Override
+    @Test
+    public void testOptaneDirectoryConfiguration() throws IOException {
+        String fullExampleXml = readResourceToString("hazelcast-full-example.xml");
+
+        // remove imports to prevent the test from failing with importing non-existing files
+        fullExampleXml = fullExampleXml.replace("<import resource=\"your-configuration-XML-file\"/>", "");
+
+        Config xmlConfig = new InMemoryXmlConfig(fullExampleXml);
+
+        assertEquals("/mnt/optane", xmlConfig.getNativeMemoryConfig().getPersistentMemoryDirectory());
+    }
+
 
     @Override
     protected Config buildCompleteAdvancedNetworkConfig() {
