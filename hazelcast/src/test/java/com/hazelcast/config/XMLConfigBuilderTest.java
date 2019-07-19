@@ -3224,7 +3224,7 @@ public class XMLConfigBuilderTest extends AbstractConfigBuilderTest {
 
         Config xmlConfig = new InMemoryXmlConfig(fullExampleXml);
 
-        assertEquals("/mnt/optane", xmlConfig.getNativeMemoryConfig().getPersistentMemoryDirectory());
+        assertEquals("/mnt/optane", xmlConfig.getNativeMemoryConfig().getOptaneDirectory());
     }
 
 

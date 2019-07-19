@@ -3410,7 +3410,7 @@ public class YamlConfigBuilderTest extends AbstractConfigBuilderTest {
 
 
         Config yamlConfig = new InMemoryYamlConfig(fullExampleYaml);
-        assertEquals("/mnt/optane", yamlConfig.getNativeMemoryConfig().getPersistentMemoryDirectory());
+        assertEquals("/mnt/optane", yamlConfig.getNativeMemoryConfig().getOptaneDirectory());
     }
 
 }

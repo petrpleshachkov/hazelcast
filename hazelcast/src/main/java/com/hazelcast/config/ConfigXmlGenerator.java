@@ -1501,7 +1501,7 @@ public class ConfigXmlGenerator {
            .node("min-block-size", nativeMemoryConfig.getMinBlockSize())
            .node("page-size", nativeMemoryConfig.getPageSize())
            .node("metadata-space-percentage", nativeMemoryConfig.getMetadataSpacePercentage())
-           .node("optane-directory", nativeMemoryConfig.getPersistentMemoryDirectory())
+           .node("optane-directory", nativeMemoryConfig.getOptaneDirectory())
            .close();
     }
 

@@ -221,21 +221,23 @@ public class NativeMemoryConfig {
     }
 
     /**
-     * Returns the persistent memory directory to be used to store memory structures allocated by native memory manager.
+     * Returns the persistent memory (Optane) directory to be used to store memory structures allocated by native
+     * memory manager.
      * <p>
      * Default value is {@code null}. It indicates that volatile RAM is being used.
      * {@code null}
      */
-    public String getPersistentMemoryDirectory() {
+    public String getOptaneDirectory() {
         return persistentMemoryDirectory;
     }
 
     /**
-     * Sets the persistent memory directory to be used to store memory structures allocated by native memory manager.
+     * Sets the persistent memory (Optane) directory to be used to store memory structures allocated by native memory
+     * manager.
      * @param directory the persistent memory directory
      * @return this {@link NativeMemoryConfig} instance
      */
-    public NativeMemoryConfig setPersistentMemoryDirectory(String directory) {
+    public NativeMemoryConfig setOptaneDirectory(String directory) {
         this.persistentMemoryDirectory = directory;
         return this;
     }

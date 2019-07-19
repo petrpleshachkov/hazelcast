@@ -262,7 +262,7 @@ public abstract class AbstractDomConfigProcessor implements DomConfigProcessor {
                 String value = getTextContent(n);
                 nativeMemoryConfig.setMetadataSpacePercentage(Float.parseFloat(value));
             } else if ("optane-directory".equals(nodeName)) {
-                nativeMemoryConfig.setPersistentMemoryDirectory(getTextContent(n).trim());
+                nativeMemoryConfig.setOptaneDirectory(getTextContent(n).trim());
             }
         }
     }
