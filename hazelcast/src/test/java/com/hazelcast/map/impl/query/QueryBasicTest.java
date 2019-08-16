@@ -375,7 +375,7 @@ public class QueryBasicTest extends HazelcastTestSupport {
     public void queryWithThis() {
         HazelcastInstance instance = createHazelcastInstance(getConfig());
         IMap<String, String> map = instance.getMap("queryWithThis");
-        map.addIndex("this", false);
+        map.addIndex("this", true);
         for (int i = 0; i < 1000; i++) {
             map.put("" + i, "" + i);
         }

@@ -74,7 +74,7 @@ public class QueryOperation extends AbstractNamedOperation implements ReadonlyOp
                 BitSet localPartitions = localPartitions();
                 if (localPartitions.cardinality() == 0) {
                     // important to deal with situation of not having any partitions
-                    result = queryRunner.populateEmptyResult(query, Collections.<Integer>emptyList());
+                    result = queryRunner.populateEmptyResult(query, Collections.emptyList());
                     return DONE_RESPONSE;
                 } else {
                     return new OffloadedImpl(queryRunner, localPartitions);

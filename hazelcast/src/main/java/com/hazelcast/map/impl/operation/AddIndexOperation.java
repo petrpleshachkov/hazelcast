@@ -83,7 +83,7 @@ public class AddIndexOperation extends MapOperation implements PartitionAwareOpe
 
         Indexes indexes = mapContainer.getIndexes(partitionId);
         RecordStoreAdapter recordStoreAdapter = new RecordStoreAdapter(recordStore);
-        InternalIndex index = indexes.addOrGetIndex(attributeName, ordered, indexes.isGlobal() ? null : recordStoreAdapter);
+        InternalIndex index = indexes.addOrGetIndex(attributeName, ordered, /*indexes.isGlobal() ? null :*/ recordStoreAdapter);
         if (index.hasPartitionIndexed(partitionId)) {
             return;
         }
