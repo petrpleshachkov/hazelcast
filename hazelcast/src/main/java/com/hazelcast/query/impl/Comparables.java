@@ -16,7 +16,11 @@
 
 package com.hazelcast.query.impl;
 
+import com.hazelcast.internal.serialization.Data;
+
 import java.util.Comparator;
+
+import static com.hazelcast.internal.memory.MemoryAllocator.NULL_ADDRESS;
 
 /**
  * Provides utilities which compare and canonicalize {@link Comparable}
