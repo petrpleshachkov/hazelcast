@@ -39,10 +39,14 @@ import static com.hazelcast.internal.util.StringUtil.isNullOrEmpty;
  * Utility methods for indexes.
  */
 public final class IndexUtils {
-    /** Maximum number of attributes allowed in the index. */
+    /**
+     * Maximum number of attributes allowed in the index.
+     */
     public static final int MAX_ATTRIBUTES = 255;
 
-    /** Pattern to stripe away "this." prefix. */
+    /**
+     * Pattern to stripe away "this." prefix.
+     */
     private static final Pattern THIS_PATTERN = Pattern.compile("^this\\.");
 
     private IndexUtils() {
@@ -53,7 +57,7 @@ public final class IndexUtils {
      * Validate provided index config and normalize it's name and attribute names.
      *
      * @param mapName Name of the map
-     * @param config Index config.
+     * @param config  Index config.
      * @return Normalized index config.
      * @throws IllegalArgumentException If index configuration is invalid.
      */
@@ -70,7 +74,7 @@ public final class IndexUtils {
 
         if (originalAttributeNames.size() > MAX_ATTRIBUTES) {
             throw new IllegalArgumentException("Index cannot have more than " + MAX_ATTRIBUTES
-                + " attributes: " + config);
+                    + " attributes: " + config);
         }
 
         if (config.getType() == IndexType.BITMAP && originalAttributeNames.size() > 1) {
@@ -95,11 +99,11 @@ public final class IndexUtils {
 
                 if (duplicateOriginalAttributeName.equals(originalAttributeName)) {
                     throw new IllegalArgumentException("Duplicate attribute name [attributeName="
-                        + originalAttributeName + ", indexConfig=" + config + ']');
+                            + originalAttributeName + ", indexConfig=" + config + ']');
                 } else {
                     throw new IllegalArgumentException("Duplicate attribute names ["
-                        + "attributeName1=" + duplicateOriginalAttributeName + ", attributeName2="
-                        + originalAttributeName + ", indexConfig=" + config + ']');
+                            + "attributeName1=" + duplicateOriginalAttributeName + ", attributeName2="
+                            + originalAttributeName + ", indexConfig=" + config + ']');
                 }
             }
 
@@ -133,7 +137,7 @@ public final class IndexUtils {
         IndexConfig newConfig = new IndexConfig().setType(indexType);
 
         StringBuilder nameBuilder = indexName == null
-            ? new StringBuilder(mapName + "_" + getIndexTypeName(indexType)) : null;
+                ? new StringBuilder(mapName + "_" + getIndexTypeName(indexType)) : null;
 
         for (String normalizedAttributeName : normalizedAttributeNames) {
             newConfig.addAttribute(normalizedAttributeName);
@@ -155,7 +159,7 @@ public final class IndexUtils {
     /**
      * Validate attribute name.
      *
-     * @param config Index config.
+     * @param config        Index config.
      * @param attributeName Attribute name.
      */
     public static void validateAttribute(IndexConfig config, String attributeName) {
@@ -171,7 +175,7 @@ public final class IndexUtils {
 
         if (attributeName0.endsWith(".")) {
             throw new IllegalArgumentException("Attribute name cannot end with dot [config=" + config
-                + ", attribute=" + attributeName + ']');
+                    + ", attribute=" + attributeName + ']');
         }
     }
 
@@ -224,7 +228,7 @@ public final class IndexUtils {
     /**
      * Create simple index definition with the given attributes
      *
-     * @param type Index type.
+     * @param type       Index type.
      * @param attributes Attribute names.
      * @return Index definition.
      */
@@ -245,7 +249,7 @@ public final class IndexUtils {
     /**
      * Create simple index definition with the given attributes and initialize it's name upfront. For testing purposes.
      *
-     * @param type Index type.
+     * @param type       Index type.
      * @param attributes Attribute names.
      * @return Index definition.
      */
@@ -416,7 +420,8 @@ public final class IndexUtils {
         switch (type) {
             case SORTED:
                 return "sorted";
-
+            case SORTED_BTREE:
+                return "sorted_btree";
             case HASH:
                 return "hash";
 

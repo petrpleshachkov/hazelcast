@@ -27,7 +27,9 @@ public enum IndexType {
     HASH(1),
 
     /** Bitmap index. Can be used with equality predicates. */
-    BITMAP(2);
+    BITMAP(2),
+
+    SORTED_BTREE(3);
 
     private final int id;
 
