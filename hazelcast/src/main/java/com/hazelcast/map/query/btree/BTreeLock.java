@@ -12,6 +12,10 @@ public interface BTreeLock {
 
     void writeLockOrRestart(MutableBoolean needRestart);
 
+    void instantDurationWriteLock(MutableBoolean needRestart);
+
+    boolean tryWriteLock(MutableBoolean needRestart);
+
     void writeUnlock();
 
     void checkOrRestart(long startRead, MutableBoolean needRestart);

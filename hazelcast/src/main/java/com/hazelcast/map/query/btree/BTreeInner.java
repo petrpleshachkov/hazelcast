@@ -1,7 +1,7 @@
 package com.hazelcast.map.query.btree;
 
-import static com.hazelcast.map.query.btree.btree.BTree.SYNCHRONIZATION_APPROACH;
-import static com.hazelcast.map.query.btree.btree.NodeBase.PageType.BTREE_INNER;
+import static com.hazelcast.map.query.btree.BTree.SYNCHRONIZATION_APPROACH;
+import static com.hazelcast.map.query.btree.NodeBase.PageType.BTREE_INNER;
 
 public class BTreeInner extends NodeBase {
 
@@ -23,6 +23,9 @@ public class BTreeInner extends NodeBase {
 
 
     int lowerBound(Comparable k) {
+        if (k == null) {
+            return 0;
+        }
         int lower = 0;
         int upper = count;
         while (lower < upper) {

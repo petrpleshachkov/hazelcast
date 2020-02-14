@@ -46,10 +46,45 @@ final class PessimBTreeLock implements BTreeLock {
         }
     }
 
+    boolean tryWriteLock() {
+        synchronized (monitor) {
+            if (getPageSharedCount() != 0) {
+                return false;
+            }
+            setPageSharedCount(-1);
+        }
+        return true;
+    }
+
+    @Override
+    public void instantDurationWriteLock(MutableBoolean needRestart) {
+        boolean interrupted = false;
+        synchronized (monitor) {
+            while (getPageSharedCount() != 0) {
+                try {
+                    incPageWaitersCount();
+                    monitor.wait();
+                } catch (InterruptedException ie) {
+                    interrupted = true;
+                } finally {
+                    decPageWaitersCount();
+                }
+            }
+        }
+        if (interrupted) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     @Override
     public void writeLockOrRestart(MutableBoolean needRestart) {
         acquireLock(false);
         //writeLockstacktrace = new Throwable();
+    }
+
+    @Override
+    public boolean tryWriteLock(MutableBoolean needRestart) {
+        return tryWriteLock();
     }
 
     @Override

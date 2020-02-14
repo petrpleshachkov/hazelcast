@@ -13,6 +13,8 @@ public class BTreeLeaf<V> extends NodeBase {
 
     protected Comparable[] keys = new Comparable[MAX_ENTRIES_LEAF];
     protected V[] payloads = (V[]) new Object[MAX_ENTRIES_LEAF];
+    protected BTreeLeaf<V> left, right;
+    protected long sequenceNumber;
 
     BTreeLeaf() {
         super(PageType.BTREE_LEAF, 0, SYNCHRONIZATION_APPROACH);
@@ -23,7 +25,15 @@ public class BTreeLeaf<V> extends NodeBase {
         return count == MAX_ENTRIES_LEAF;
     }
 
+    void incSequenceNumber() {
+        sequenceNumber++;
+    }
+
     int lowerBound(Comparable k) {
+        if (k == null) {
+            return 0;
+        }
+
         int lower = 0;
         int upper = count;
         do {
@@ -47,6 +57,7 @@ public class BTreeLeaf<V> extends NodeBase {
                 // Upsert
                 V oldValue = payloads[pos];
                 payloads[pos] = p;
+                sequenceNumber++;
                 return oldValue;
             }
             System.arraycopy(keys, pos, keys, pos + 1, count - pos);
@@ -58,6 +69,7 @@ public class BTreeLeaf<V> extends NodeBase {
             payloads[0] = p;
         }
         count++;
+        sequenceNumber++;
         return null;
     }
 
@@ -73,6 +85,7 @@ public class BTreeLeaf<V> extends NodeBase {
                 System.arraycopy(payloads, pos + 1, payloads, pos, count - pos - 1);
             }
             count--;
+            sequenceNumber++;
         }
         return oldValue;
     }
@@ -83,12 +96,12 @@ public class BTreeLeaf<V> extends NodeBase {
         count = count-newLeaf.count;
         System.arraycopy(keys, count, newLeaf.keys, 0, newLeaf.count);
         System.arraycopy(payloads, count, newLeaf.payloads, 0, newLeaf.count);
+        sequenceNumber++;
         return newLeaf;
     }
 
     Comparable getSeparatorAfterSplit() {
         return keys[count-1];
     }
-
 
 }

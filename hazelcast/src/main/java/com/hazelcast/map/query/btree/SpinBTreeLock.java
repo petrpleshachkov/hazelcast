@@ -757,15 +757,32 @@ public class SpinBTreeLock implements BTreeLock {
         return 0;
     }
 
+
     @Override
     public void writeLockOrRestart(MutableBoolean needRestart) {
         writeLock(onHeapLockState, -1);
     }
 
     @Override
+    public boolean tryWriteLock(MutableBoolean needRestart) {
+        return tryWriteLock(onHeapLockState, -1);
+    }
+
+    @Override
+    public void instantDurationWriteLock(MutableBoolean needRestart) {
+        if (tryWriteLock(onHeapLockState, -1)) {
+            return;
+        }
+        writeLock(onHeapLockState, -1);
+        writeUnlock();
+    }
+
+
+    @Override
     public void writeUnlock() {
         writeUnlock(onHeapLockState, -1);
     }
+
 
     @Override
     public void checkOrRestart(long startRead, MutableBoolean needRestart) {

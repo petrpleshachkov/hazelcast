@@ -72,4 +72,14 @@ final class OptBTreeLock implements BTreeLock {
     public boolean checkLockReleased() {
         return true;
     }
+
+    @Override
+    public boolean tryWriteLock(MutableBoolean needRestart) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void instantDurationWriteLock(MutableBoolean needRestart) {
+        throw new UnsupportedOperationException();
+    }
 }

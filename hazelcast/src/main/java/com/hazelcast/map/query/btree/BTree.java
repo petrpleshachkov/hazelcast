@@ -13,7 +13,7 @@ import static com.hazelcast.map.query.btree.NodeBase.PageType.BTREE_INNER;
 
 public class BTree<V> implements BTreeIf<V> {
 
-    static final LockType SYNCHRONIZATION_APPROACH = PESSIMISTIC;
+    static final LockType SYNCHRONIZATION_APPROACH = SPIN;
 
     private volatile NodeBase root;
 
@@ -63,7 +63,6 @@ public class BTree<V> implements BTreeIf<V> {
                 yield(restartCount);
             }
             needRestart.setValue(false);
-
 
             // Current node
             NodeBase node = root;
@@ -158,6 +157,7 @@ public class BTree<V> implements BTreeIf<V> {
             if (leaf.count == MAX_ENTRIES_LEAF) {
                 // Lock
                 if (parent != null) {
+                    assert !needRestart.booleanValue();
                     versionParent = parent.upgradeToWriteLockOrRestart(versionParent, needRestart);
                     if (needRestart.booleanValue()) {
                         parent.readUnlockOrRestart(versionParent, needRestart);
@@ -181,8 +181,23 @@ public class BTree<V> implements BTreeIf<V> {
                     //System.out.println("Split leaf restart 3");
                     continue restart;
                 }
+
                 // Split
                 BTreeLeaf newLeaf = leaf.split();
+                BTreeLeaf rightChild = leaf.right;
+                if (rightChild != null) {
+                    rightChild.writeLockOrRestart(needRestart);
+                    assert !needRestart.booleanValue();
+                }
+
+                // update left/right pointers
+                newLeaf.right = leaf.right;
+                newLeaf.left = leaf;
+                if (rightChild != null) {
+                    rightChild.left = newLeaf;
+                }
+                leaf.right = newLeaf;
+
                 Comparable sep = leaf.getSeparatorAfterSplit();
                 //System.out.println("Splitted leaf page");
                 if (parent != null) {
@@ -192,6 +207,9 @@ public class BTree<V> implements BTreeIf<V> {
                 }
                 // Unlock and restart
                 node.writeUnlock();
+                if (rightChild != null) {
+                    rightChild.writeUnlock();
+                }
                 if (parent != null) {
                     parent.writeUnlock();
                 }
@@ -376,8 +394,10 @@ public class BTree<V> implements BTreeIf<V> {
             if (rootLevel == 1) {
                 versionNode = node.upgradeToWriteLockOrRestart(versionNode, needRestart);
                 if (!needRestart.booleanValue()) {
-                    deleteNodeFromParentWriteLocked(k, node, (BTreeInner) node, null, needRestart);
-                    return;
+                    if (deleteNodeFromParentWriteLocked(k, node, (BTreeInner) node, null, needRestart)) {
+                        return;
+                    }
+                    continue restart;
                 } else {
                     // release read lock on lock and try write lock
                     node.readUnlockOrRestart(versionNode, needRestart);
@@ -388,10 +408,11 @@ public class BTree<V> implements BTreeIf<V> {
                         continue restart;
                     }
                     if (node.level == 1) {
-                        deleteNodeFromParentWriteLocked(k, node, (BTreeInner) node, null, needRestart);
-                        return;
+                        if (deleteNodeFromParentWriteLocked(k, node, (BTreeInner) node, null, needRestart)) {
+                            return;
+                        }
+                        continue restart;
                     }
-
                 }
 
             }
@@ -423,13 +444,15 @@ public class BTree<V> implements BTreeIf<V> {
 
             versionNode = ancestor.upgradeToWriteLockOrRestart(versionNode, needRestart);
             if (needRestart.booleanValue()) {
-                // TODO instant write lock
                 ancestor.readUnlockOrRestart(-1, needRestart);
                 releaseLocks(internals, needRestart);
+                ancestor.instantDurationWriteLock(needRestart);
                 continue restart;
             } else {
-                deleteNodeFromParentWriteLocked(k, node, (BTreeInner) ancestor, internals, needRestart);
-                return;
+                if (deleteNodeFromParentWriteLocked(k, node, (BTreeInner) ancestor, internals, needRestart)) {
+                    return;
+                }
+                continue restart;
             }
         }
     }
@@ -443,29 +466,68 @@ public class BTree<V> implements BTreeIf<V> {
         }
     }
 
-    private void deleteNodeFromParentWriteLocked(Comparable k, NodeBase parent, BTreeInner ancestor, List<NodeBase> internals,
+    private boolean deleteNodeFromParentWriteLocked(Comparable k, NodeBase parent, BTreeInner ancestor, List<NodeBase> internals,
                                                  MutableBoolean needRestart) {
         BTreeInner parentInner = (BTreeInner) parent;
 
         int keyPos = parentInner.lowerBound(k);
-        NodeBase child = parentInner.children[keyPos];
+        BTreeLeaf child = (BTreeLeaf) parentInner.children[keyPos];
+        BTreeLeaf leftChild = null;
+        BTreeLeaf rightChild = null;
 
         child.readLockOrRestart(needRestart);
         // TODO: restart logic for optimistic locking
-
         if (child.count == 0) {
             if (ancestor.count != 0) {
                 // the page is still empty, delete it from the ancestor;
                 // the deleted subtree will be GCed,
                 // including not released locks
-                ancestor.remove(k);
+
+                //lock left and right children
+                if (child.left != null) {
+                    leftChild = child.left;
+                    if (!child.left.tryWriteLock(needRestart)) {
+                        ancestor.writeUnlock();
+                        releaseLocks(internals, needRestart);
+                        child.readUnlockOrRestart(-1, needRestart);
+                        // TODO: instant duration to avoid active waiting
+                        child.left.instantDurationWriteLock(needRestart);
+                        return false;
+                    }
+                }
+                if (child.right != null) {
+                    rightChild = child.right;
+                    child.right.writeLockOrRestart(needRestart);
+                }
+                // Check that child still part of the chain (and not deleted previously)
+                if ((child.left == null || child.left.right == child)
+                        && (child.right == null || child.right.left == child)) {
+                    ancestor.remove(k);
+
+                    if (child.left != null) {
+                        child.left.right = child.right;
+                        child.left.incSequenceNumber();
+                    }
+
+                    if (child.right != null) {
+                        child.right.left = child.left;
+                        child.right.incSequenceNumber();
+                    }
+                }
+
                 //System.out.println("Removed key " + k + " from inner node " + ancestor + " with level " + ancestor.level );
             }
         }
-        child.readUnlockOrRestart(-1, needRestart);
-        releaseLocks(internals, needRestart);
         ancestor.writeUnlock();
-
+        releaseLocks(internals, needRestart);
+        child.readUnlockOrRestart(-1, needRestart);
+        if (leftChild != null) {
+            leftChild.writeUnlock();
+        }
+        if (rightChild != null) {
+            rightChild.writeUnlock();
+        }
+        return true;
     }
 
     @Override
@@ -556,7 +618,7 @@ public class BTree<V> implements BTreeIf<V> {
     }
 
 
-    long scan(Comparable k, int range, V[] output) {
+    ConcurrentIndexValueIterator<V> lookup(Comparable from, Comparable to) {
         int restartCount = 0;
         MutableBoolean needRestart = new MutableBoolean(false);
 
@@ -570,6 +632,7 @@ public class BTree<V> implements BTreeIf<V> {
             NodeBase node = root;
             long versionNode = node.readLockOrRestart(needRestart);
             if (needRestart.booleanValue() || (node != root)) {
+                node.readUnlockOrRestart(-1, needRestart);
                 continue restart;
             }
 
@@ -590,7 +653,7 @@ public class BTree<V> implements BTreeIf<V> {
                 parent = inner;
                 versionParent = versionNode;
 
-                node = inner.children[inner.lowerBound(k)];
+                node = inner.children[inner.lowerBound(from)];
                 inner.checkOrRestart(versionNode, needRestart);
                 if (needRestart.booleanValue()) {
                     continue restart;
@@ -601,28 +664,41 @@ public class BTree<V> implements BTreeIf<V> {
                 }
             }
 
-            BTreeLeaf leaf = (BTreeLeaf) node;
-            int pos = leaf.lowerBound(k);
-            int count = 0;
-            for (int i = pos; i < leaf.count; i++) {
-                if (count == range) {
-                    break;
-                }
-                output[count++] = (V) leaf.payloads[i];
-            }
-
             if (parent != null) {
-                parent.readUnlockOrRestart(versionParent, needRestart);
-                if (needRestart.booleanValue()) {
-                    continue restart;
-                }
-            }
-            node.readUnlockOrRestart(versionNode, needRestart);
-            if (needRestart.booleanValue()) {
-                continue restart;
+                parent.readUnlockOrRestart(-1, needRestart);
+                assert !needRestart.booleanValue();
             }
 
-            return count;
+            BTreeLeaf leaf = (BTreeLeaf) node;
+
+            ConcurrentIndexValueIterator it = new ConcurrentIndexValueIterator(this, to);
+            // Skip empty nodes
+            while (leaf.count == 0) {
+                BTreeLeaf rightChild = leaf.right;
+                if (rightChild == null) {
+                    leaf.readUnlockOrRestart(-1, needRestart);
+                    return it;
+                }
+
+                rightChild.readLockOrRestart(needRestart);
+                assert !needRestart.booleanValue();
+                leaf.readUnlockOrRestart(-1, needRestart);
+                leaf = rightChild;
+            }
+
+            int pos = leaf.lowerBound(from);
+            if (pos < leaf.count) {
+                it.nextKey = leaf.keys[pos];
+                it.sequenceNumber = leaf.sequenceNumber;
+                it.currentNode = leaf;
+                it.currentKeyPos = pos;
+            }
+
+            leaf.readUnlockOrRestart(versionNode, needRestart);
+            assert !needRestart.booleanValue();
+
+            it.nextKeyIsWithinRange();
+            return it;
         }
     }
 

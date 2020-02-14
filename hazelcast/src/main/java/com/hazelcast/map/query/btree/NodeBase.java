@@ -69,6 +69,16 @@ class NodeBase implements BTreeLock {
     }
 
     @Override
+    public void instantDurationWriteLock(MutableBoolean needRestart) {
+        lock.instantDurationWriteLock(needRestart);
+    }
+
+    @Override
+    public boolean tryWriteLock(MutableBoolean needRestart) {
+        return lock.tryWriteLock(needRestart);
+    }
+
+    @Override
     public void writeUnlock() {
         lock.writeUnlock();
     }
