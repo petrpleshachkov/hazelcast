@@ -48,6 +48,8 @@ public class IndexImpl extends AbstractIndex {
         switch (config.getType()) {
             case SORTED:
                 return new OrderedIndexStore(copyBehavior);
+            case SORTED_BTREE:
+                return new BTreeIndexStore();
             case HASH:
                 return new UnorderedIndexStore(copyBehavior);
             case BITMAP:

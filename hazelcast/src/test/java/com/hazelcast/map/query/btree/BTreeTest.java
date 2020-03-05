@@ -1,6 +1,8 @@
 package com.hazelcast.map.query.btree;
 
+import com.hazelcast.map.InMemoryFormatTest;
 import com.hazelcast.test.HazelcastTestSupport;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Test;
 
 import java.io.PrintStream;
@@ -12,12 +14,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.hazelcast.map.query.btree.BTree.BTreeAction;
@@ -62,6 +66,497 @@ public class BTreeTest extends HazelcastTestSupport {
     }
 
     @Test
+    public void testSequentialIngestBtreeVsSkipList() {
+        BTree<String> btree = new BTree<>();
+
+        Set<String> keys = new HashSet<>();
+        int entriesNum = 1000000;
+        Map<String, String> entries = generateData(entriesNum);
+
+
+        long start = System.nanoTime();
+        for (Map.Entry<String, String> entry : entries.entrySet()) {
+            btree.insert(entry.getKey(), entry.getValue());
+        }
+        long btreeNanoTime = System.nanoTime() - start;
+
+        ConcurrentSkipListMap skipListMap = new ConcurrentSkipListMap();
+        start = System.nanoTime();
+        for (Map.Entry<String, String> entry : entries.entrySet()) {
+            skipListMap.put(entry.getKey(), entry.getValue());
+        }
+        long skipListNanoTime = System.nanoTime() - start;
+
+        System.out.println("Put sequentially entriesNum " + entriesNum + " SkipList time " + skipListNanoTime + ", btree time " + btreeNanoTime);
+    }
+
+    @Test
+    public void testParallelIngestBtreeSkipList() {
+        int concurrency = Runtime.getRuntime().availableProcessors();
+
+        BTree<String> btree = new BTree<>();
+        ConcurrentSkipListMap skipListMap = new ConcurrentSkipListMap();
+
+        List<Thread> threads = new ArrayList<>();
+        List<Map<String, String>> generatedDataForThreads = new ArrayList<>();
+        int entriesNumPerThread = 200000;
+        for (int i = 0; i < concurrency; ++i) {
+            generatedDataForThreads.add(generateData(entriesNumPerThread));
+        }
+
+        ConcurrentNavigableMap<String, String> entries = new ConcurrentSkipListMap<>();
+
+        final Random r = new Random();
+        AtomicReference<Throwable> exception = new AtomicReference<>();
+        AtomicBoolean stop = new AtomicBoolean();
+        for (int i = 0; i < concurrency; ++i) {
+            final int index = i;
+            // inserter
+            Thread thread = new Thread(() -> {
+                try {
+                    Map<String, String> data = generatedDataForThreads.get(index);
+                    for (Map.Entry<String, String> entry : data.entrySet()) {
+                        btree.insert(entry.getKey(), entry.getValue());
+                        //skipListMap.put(entry.getKey(), entry.getValue());
+                    }
+                    //System.out.println("Finished updater thread");
+                } catch (Throwable t) {
+                    exception.compareAndSet(null, t);
+                    t.printStackTrace(System.err);
+                }
+            });
+            threads.add(thread);
+        }
+
+        long start = System.nanoTime();
+        // Start threads
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        // Join threads
+        for (Thread thread : threads) {
+            assertJoinable(20, thread);
+        }
+        long totalTime = System.nanoTime() - start;
+
+        if (exception.get() != null) {
+            exception.get().printStackTrace(System.err);
+        }
+        assertNull(exception.get());
+
+        System.out.println("Total entries num " + concurrency * entriesNumPerThread + ", btree time " + totalTime);
+    }
+
+    @Test
+    public void testFullScanWithConcurrentUpdates() {
+        int concurrency = Runtime.getRuntime().availableProcessors();
+
+        BTree<String> btree = new BTree<>();
+        ConcurrentSkipListMap skipListMap = new ConcurrentSkipListMap();
+
+        List<Thread> threads = new ArrayList<>(concurrency);
+        List<Thread> scanThreads = new ArrayList<>(concurrency / 2);
+        int entriesNum = 1000000;
+        Map<String, String> generatedData = generateData(entriesNum);
+
+        for (Map.Entry<String, String> entry : generatedData.entrySet()) {
+            //skipListMap.put(entry.getKey(), entry.getValue());
+            btree.insert(entry.getKey(), entry.getValue());
+        }
+
+        Pair<String, String> pair = getMinMaxKey(generatedData);
+        String minKey = pair.getLeft();
+        String maxKey = pair.getRight();
+
+        AtomicReference<Throwable> exception = new AtomicReference<>();
+        AtomicBoolean stop = new AtomicBoolean();
+        for (int i = 0; i < concurrency; ++i) {
+            final int index = i;
+            Thread thread;
+            if (i < concurrency / 2) {
+                // Updater
+                thread = new Thread(() -> {
+                    try {
+                        String prevValue = null;
+                        for (Map.Entry<String, String> entry : generatedData.entrySet()) {
+                            String newValue = prevValue == null ? entry.getValue() : prevValue;
+                            //skipListMap.put(entry.getKey(), newValue);
+                            //btree.insert(entry.getKey(), entry.getValue());
+                            prevValue = entry.getValue();
+                        }
+                        //System.out.println("Finished updater thread");
+                    } catch (Throwable t) {
+                        exception.compareAndSet(null, t);
+                        t.printStackTrace(System.err);
+                    }
+                });
+            } else {
+                // Scanner
+                thread = new Thread(() -> {
+                    try {
+                        //ConcurrentNavigableMap<String, String> subMap = skipListMap.subMap(minKey, true, maxKey, true);
+                        //Iterator<Map.Entry<String, String>> it = subMap.entrySet().iterator();
+                        ConcurrentIndexValueIterator it = btree.lookup(minKey, true, maxKey, true);
+                        int count = 0;
+                        while (it.hasNext()) {
+                            it.next();
+                            ++count;
+                        }
+                        assertEquals(entriesNum, count);
+                    } catch (Throwable t) {
+                        exception.compareAndSet(null, t);
+                        t.printStackTrace(System.err);
+                    }
+                });
+                scanThreads.add(thread);
+            }
+
+
+            threads.add(thread);
+        }
+
+        long start = System.nanoTime();
+        // Start threads
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        // Join scanner threads
+        for (Thread thread : scanThreads) {
+            assertJoinable(20, thread);
+        }
+        long scannerTime = System.nanoTime() - start;
+
+        // Join threads
+        for (Thread thread : threads) {
+            assertJoinable(20, thread);
+        }
+        long totalTime = System.nanoTime() - start;
+
+        if (exception.get() != null) {
+            exception.get().printStackTrace(System.err);
+        }
+        assertNull(exception.get());
+
+        System.out.println("Total entries num " + entriesNum + ", btree time " + totalTime + ", scan time " + scannerTime);
+    }
+
+
+    @Test
+    public void testConcurrentFullScanNoUpdates() {
+        int concurrency = Runtime.getRuntime().availableProcessors();
+
+        BTree<String> btree = new BTree<>();
+        ConcurrentSkipListMap skipListMap = new ConcurrentSkipListMap();
+
+        List<Thread> scanThreads = new ArrayList<>(concurrency);
+        int entriesNum = 1000000;
+        Map<String, String> generatedData = generateData(entriesNum);
+
+        for (Map.Entry<String, String> entry : generatedData.entrySet()) {
+            //skipListMap.put(entry.getKey(), entry.getValue());
+            btree.insert(entry.getKey(), entry.getValue());
+        }
+
+        Pair<String, String> pair = getMinMaxKey(generatedData);
+        String minKey = pair.getLeft();
+        String maxKey = pair.getRight();
+
+        AtomicReference<Throwable> exception = new AtomicReference<>();
+        AtomicBoolean stop = new AtomicBoolean();
+        AtomicLongArray timeArray = new AtomicLongArray(concurrency);
+        for (int i = 0; i < concurrency; ++i) {
+            Thread thread;
+            // Scanner
+            final int index = i;
+            thread = new Thread(() -> {
+                try {
+                    long start = System.nanoTime();
+                    for (int j = 0; j < 100; ++j) {
+                        //ConcurrentNavigableMap<String, String> subMap = skipListMap.subMap(minKey, true, maxKey, true);
+                        //Iterator<Map.Entry<String, String>> it = subMap.entrySet().iterator();
+                        ConcurrentIndexValueIterator it = btree.lookup(minKey, true, maxKey, true);
+                        int count = 0;
+                        while (it.hasNext()) {
+                            it.next();
+                            ++count;
+                        }
+                        assertEquals(entriesNum, count);
+                    }
+
+                    long time = System.nanoTime() - start;
+                    timeArray.set(index, time);
+                } catch (Throwable t) {
+                    exception.compareAndSet(null, t);
+                    t.printStackTrace(System.err);
+                }
+            });
+            scanThreads.add(thread);
+        }
+
+        // Start threads
+        for (Thread thread : scanThreads) {
+            thread.start();
+        }
+
+        // Join scanner threads
+        for (Thread thread : scanThreads) {
+            assertJoinable(200, thread);
+        }
+
+
+        if (exception.get() != null) {
+            exception.get().printStackTrace(System.err);
+        }
+
+        assertNull(exception.get());
+
+        System.out.println("Total entries num " + entriesNum + ", btree scan time " + timeArray.toString());
+    }
+
+    @Test
+    public void testConcurrentRandomScanNoUpdates() {
+        int concurrency = Runtime.getRuntime().availableProcessors();
+
+        BTree<String> btree = new BTree<>();
+        ConcurrentSkipListMap skipListMap = new ConcurrentSkipListMap();
+
+        List<Thread> scanThreads = new ArrayList<>(concurrency);
+        int entriesNum = 1000000;
+        Map<String, String> generatedData = generateData(entriesNum);
+        Set<String> keysSet = new TreeSet<>(generatedData.keySet());
+        List<String> keys = new ArrayList<>(keysSet);
+
+        for (Map.Entry<String, String> entry : generatedData.entrySet()) {
+            //skipListMap.put(entry.getKey(), entry.getValue());
+            btree.insert(entry.getKey(), entry.getValue());
+        }
+
+        Random r = new Random();
+
+        AtomicReference<Throwable> exception = new AtomicReference<>();
+        AtomicBoolean stop = new AtomicBoolean();
+        AtomicLongArray timeArray = new AtomicLongArray(concurrency);
+        for (int i = 0; i < concurrency; ++i) {
+            Thread thread;
+            // Scanner
+            final int index = i;
+            thread = new Thread(() -> {
+                try {
+                    long start = System.nanoTime();
+                    for (int j = 0; j < 100; ++j) {
+                        int keyIndex = r.nextInt(keys.size());
+                        String minKey = keys.get(keyIndex);
+                        String maxKey = (keyIndex + 100) < keys.size() ? keys.get(keyIndex + 100) : keys.get(keys.size() - 1);
+                        //ConcurrentNavigableMap<String, String> subMap = skipListMap.subMap(minKey, true, maxKey, true);
+                        //Iterator<Map.Entry<String, String>> it = subMap.entrySet().iterator();
+                        ConcurrentIndexValueIterator it = btree.lookup(minKey, true, maxKey, true);
+                        int count = 0;
+                        while (it.hasNext()) {
+                            it.next();
+                            ++count;
+                        }
+                        assertTrue(count >= 1);
+                    }
+
+                    long time = System.nanoTime() - start;
+                    timeArray.set(index, time);
+                } catch (Throwable t) {
+                    exception.compareAndSet(null, t);
+                    t.printStackTrace(System.err);
+                }
+            });
+            scanThreads.add(thread);
+        }
+
+        // Start threads
+        for (Thread thread : scanThreads) {
+            thread.start();
+        }
+
+        // Join scanner threads
+        for (Thread thread : scanThreads) {
+            assertJoinable(200, thread);
+        }
+
+
+        if (exception.get() != null) {
+            exception.get().printStackTrace(System.err);
+        }
+
+        assertNull(exception.get());
+
+        System.out.println("Total entries num " + entriesNum + ", skiplist scan time " + timeArray.toString());
+    }
+
+    @Test
+    public void testConcurrentRandomRemoveInsert() {
+        int concurrency = Runtime.getRuntime().availableProcessors();
+
+        BTree<String> btree = new BTree<>();
+        ConcurrentSkipListMap<String, String> skipListMap = new ConcurrentSkipListMap();
+
+        List<Thread> scanThreads = new ArrayList<>(concurrency);
+        int entriesNum = 1000000;
+        Map<String, String> generatedData = generateData(entriesNum);
+        Set<String> keysSet = new TreeSet<>(generatedData.keySet());
+        List<String> keys = new ArrayList<>(keysSet);
+
+        for (Map.Entry<String, String> entry : generatedData.entrySet()) {
+            skipListMap.put(entry.getKey(), entry.getValue());
+            //btree.insert(entry.getKey(), entry.getValue());
+        }
+
+        Random r = new Random();
+
+        AtomicReference<Throwable> exception = new AtomicReference<>();
+        AtomicBoolean stop = new AtomicBoolean();
+        AtomicLongArray timeArray = new AtomicLongArray(concurrency);
+        for (int i = 0; i < concurrency; ++i) {
+            Thread thread;
+            // Scanner
+            final int index = i;
+            thread = new Thread(() -> {
+                try {
+                    long start = System.nanoTime();
+                    for (int j = 0; j < 100; ++j) {
+                        int keyIndex = r.nextInt(keys.size());
+
+                        //ConcurrentNavigableMap<String, String> subMap = skipListMap.subMap(minKey, true, maxKey, true);
+                        //Iterator<Map.Entry<String, String>> it = subMap.entrySet().iterator();
+                        String key = keys.get(keyIndex);
+                        String value = skipListMap.remove(key);
+                        //String value = btree.remove(key);
+                        if (value != null) {
+                            //btree.insert(key, value);
+                            skipListMap.put(key, value);
+                        }
+                    }
+
+                    long time = System.nanoTime() - start;
+                    timeArray.set(index, time);
+                } catch (Throwable t) {
+                    exception.compareAndSet(null, t);
+                    t.printStackTrace(System.err);
+                }
+            });
+            scanThreads.add(thread);
+        }
+
+        // Start threads
+        for (Thread thread : scanThreads) {
+            thread.start();
+        }
+
+        // Join scanner threads
+        for (Thread thread : scanThreads) {
+            assertJoinable(200, thread);
+        }
+
+
+        if (exception.get() != null) {
+            exception.get().printStackTrace(System.err);
+        }
+
+        assertNull(exception.get());
+
+        System.out.println("Total entries num " + entriesNum + ", btree remove/insert time " + timeArray.toString());
+    }
+
+
+
+    @Test
+    public void testConcurrentLookupNoUpdates() {
+        int concurrency = Runtime.getRuntime().availableProcessors();
+
+        BTree<String> btree = new BTree<>();
+        ConcurrentSkipListMap skipListMap = new ConcurrentSkipListMap();
+
+        List<Thread> lookupThreads = new ArrayList<>(concurrency);
+        int entriesNum = 1000000;
+        Map<String, String> generatedData = generateData(entriesNum);
+
+        for (Map.Entry<String, String> entry : generatedData.entrySet()) {
+            //skipListMap.put(entry.getKey(), entry.getValue());
+            btree.insert(entry.getKey(), entry.getValue());
+        }
+
+        Set<String> keys = generatedData.keySet();
+
+        Pair<String, String> pair = getMinMaxKey(generatedData);
+        String minKey = pair.getLeft();
+        String maxKey = pair.getRight();
+
+        AtomicReference<Throwable> exception = new AtomicReference<>();
+        AtomicBoolean stop = new AtomicBoolean();
+        for (int i = 0; i < concurrency; ++i) {
+            Thread thread;
+            // Scanner
+            thread = new Thread(() -> {
+                try {
+                    for (String key : keys) {
+                        assertNotNull(btree.lookup(key));
+                        //assertNotNull(skipListMap.get(key));
+                    }
+                } catch (Throwable t) {
+                    exception.compareAndSet(null, t);
+                    t.printStackTrace(System.err);
+                }
+            });
+            lookupThreads.add(thread);
+        }
+
+        long start = System.nanoTime();
+        // Start threads
+        for (Thread thread : lookupThreads) {
+            thread.start();
+        }
+
+        // Join lookup threads
+        for (Thread thread : lookupThreads) {
+            assertJoinable(200, thread);
+        }
+
+        long totalLookupTime = System.nanoTime() - start;
+
+        if (exception.get() != null) {
+            exception.get().printStackTrace(System.err);
+        }
+
+        assertNull(exception.get());
+
+        System.out.println("Total map size " + entriesNum + ", btree total lookup time " + totalLookupTime);
+    }
+
+
+    private Map<String, String> generateData(int count) {
+        Map<String, String> entries = new HashMap<>(count);
+        for (int i = 0; i < count; ++i) {
+            String key = UUID.randomUUID().toString();
+            String value = UUID.randomUUID().toString();
+            entries.put(key, value);
+        }
+        return entries;
+    }
+
+    Pair<String, String> getMinMaxKey(Map<String, String> map) {
+        String min = null;
+        String max = null;
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            if (min == null) {
+                min = entry.getKey();
+                max = entry.getKey();
+            } else {
+                min = entry.getKey().compareTo(min) < 0 ? entry.getKey() : min;
+                max = entry.getKey().compareTo(max) > 0 ? entry.getKey() : max;
+            }
+        }
+        return Pair.of(min, max);
+    }
+
+
+    @Test
     public void testFullScan() {
         BTree<String> btree = new BTree<>();
 
@@ -87,7 +582,7 @@ public class BTreeTest extends HazelcastTestSupport {
             map.put(key, value);
         }
 
-        ConcurrentIndexValueIterator<String> it = btree.lookup(minKey, maxKey);
+        ConcurrentIndexValueIterator<String> it = btree.lookup(minKey, true, maxKey, true);
         int count = 0;
         while (it.hasNext()) {
             String key = (String) it.next();
@@ -328,10 +823,10 @@ public class BTreeTest extends HazelcastTestSupport {
                         int minKeysCount = 0;
                         while (!stop.get()) {
 
-                            ConcurrentIndexValueIterator keysIt = btree.lookup(null, null);
+                            ConcurrentIndexValueIterator keysIt = btree.lookup(null, true, null, true);
 
                             int count = 0;
-                            while(keysIt.hasNext()) {
+                            while (keysIt.hasNext()) {
                                 assertNotNull(btree.lookup(keysIt.next()));
                                 count++;
                             }

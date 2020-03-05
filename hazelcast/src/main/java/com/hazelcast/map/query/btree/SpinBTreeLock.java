@@ -67,6 +67,7 @@ public class SpinBTreeLock implements BTreeLock {
      */
     private final AtomicLong onHeapLockState;
 
+
     /**
      * @param concLvl Concurrency level, must be a power of two.
      */
@@ -93,6 +94,7 @@ public class SpinBTreeLock implements BTreeLock {
     }
 
     /**
+     *
      */
     public SpinBTreeLock init(int tag) {
         tag &= 0xFFFF;
@@ -136,6 +138,7 @@ public class SpinBTreeLock implements BTreeLock {
         lockObj.lock();
 
         try {
+
             updateReadersWaitCount(onHeapLockState, lockObj, 1);
 
             return waitAcquireReadLock(onHeapLockState, idx, tag);
@@ -206,9 +209,9 @@ public class SpinBTreeLock implements BTreeLock {
                 return false;
 
             if (canWriteLock(state)) {
-                if (lock.compareAndSet(state, updateState(state, -1, 0, 0)))
+                if (lock.compareAndSet(state, updateState(state, -1, 0, 0))) {
                     return true;
-                else
+                } else
                     // Retry CAS, do not count as spin cycle.
                     i--;
             }
@@ -283,6 +286,7 @@ public class SpinBTreeLock implements BTreeLock {
                 lockObj.unlock();
             }
         }
+
     }
 
     /**
@@ -340,9 +344,9 @@ public class SpinBTreeLock implements BTreeLock {
                 return null;
 
             if (lockCount(state) == 1) {
-                if (lock.compareAndSet(state, updateState(state, -2, 0, 0)))
+                if (lock.compareAndSet(state, updateState(state, -2, 0, 0))) {
                     return true;
-                else
+                } else
                     // Retry CAS, do not count as spin cycle.
                     i--;
             }
@@ -388,9 +392,9 @@ public class SpinBTreeLock implements BTreeLock {
                 return null;
 
             if (lockCount(state) == 1) {
-                if (lock.compareAndSet(state, updateState(state, -2, 0, 0)))
+                if (lock.compareAndSet(state, updateState(state, -2, 0, 0))) {
                     return true;
-                else
+                } else
                     // Retry CAS, do not count as spin cycle.
                     i--;
             }
@@ -771,6 +775,7 @@ public class SpinBTreeLock implements BTreeLock {
     @Override
     public void instantDurationWriteLock(MutableBoolean needRestart) {
         if (tryWriteLock(onHeapLockState, -1)) {
+            writeUnlock();
             return;
         }
         writeLock(onHeapLockState, -1);

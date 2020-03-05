@@ -8,6 +8,8 @@ public interface BTreeIf<V> {
 
     V lookup(Comparable k);
 
+    ConcurrentIndexValueIterator<V> lookup(Comparable from, boolean fromInclusive, Comparable to, boolean toInclusive);
+
     void clear();
 
 }

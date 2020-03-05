@@ -1,5 +1,7 @@
 package com.hazelcast.map.query.btree;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import static com.hazelcast.map.query.btree.BTree.SYNCHRONIZATION_APPROACH;
 
 public class BTreeLeaf<V> extends NodeBase {
@@ -14,11 +16,10 @@ public class BTreeLeaf<V> extends NodeBase {
     protected Comparable[] keys = new Comparable[MAX_ENTRIES_LEAF];
     protected V[] payloads = (V[]) new Object[MAX_ENTRIES_LEAF];
     protected BTreeLeaf<V> left, right;
-    protected long sequenceNumber;
+    protected AtomicLong sequenceNumber = new AtomicLong();
 
     BTreeLeaf() {
         super(PageType.BTREE_LEAF, 0, SYNCHRONIZATION_APPROACH);
-        //System.out.println("New leaf page " + this);
     }
 
     boolean isFull() {
@@ -26,7 +27,7 @@ public class BTreeLeaf<V> extends NodeBase {
     }
 
     void incSequenceNumber() {
-        sequenceNumber++;
+        sequenceNumber.incrementAndGet();
     }
 
     int lowerBound(Comparable k) {
@@ -57,7 +58,7 @@ public class BTreeLeaf<V> extends NodeBase {
                 // Upsert
                 V oldValue = payloads[pos];
                 payloads[pos] = p;
-                sequenceNumber++;
+                sequenceNumber.incrementAndGet();
                 return oldValue;
             }
             System.arraycopy(keys, pos, keys, pos + 1, count - pos);
@@ -69,7 +70,7 @@ public class BTreeLeaf<V> extends NodeBase {
             payloads[0] = p;
         }
         count++;
-        sequenceNumber++;
+        sequenceNumber.incrementAndGet();
         return null;
     }
 
@@ -85,7 +86,7 @@ public class BTreeLeaf<V> extends NodeBase {
                 System.arraycopy(payloads, pos + 1, payloads, pos, count - pos - 1);
             }
             count--;
-            sequenceNumber++;
+            sequenceNumber.incrementAndGet();
         }
         return oldValue;
     }
@@ -96,7 +97,7 @@ public class BTreeLeaf<V> extends NodeBase {
         count = count-newLeaf.count;
         System.arraycopy(keys, count, newLeaf.keys, 0, newLeaf.count);
         System.arraycopy(payloads, count, newLeaf.payloads, 0, newLeaf.count);
-        sequenceNumber++;
+        sequenceNumber.incrementAndGet();
         return newLeaf;
     }
 

@@ -5,7 +5,7 @@ import static com.hazelcast.map.query.btree.NodeBase.PageType.BTREE_INNER;
 
 public class BTreeInner extends NodeBase {
 
-    static final int MAX_ENTRIES_INNER =64;// (PAGE_SIZE - PAGE_HEADER_SIZE) / (KEY_POINTER_SIZE + VALUE_POINTER_SIZE);
+    static final int MAX_ENTRIES_INNER = 64;// (PAGE_SIZE - PAGE_HEADER_SIZE) / (KEY_POINTER_SIZE + VALUE_POINTER_SIZE);
 
     protected NodeBase[] children = new NodeBase[MAX_ENTRIES_INNER];
 

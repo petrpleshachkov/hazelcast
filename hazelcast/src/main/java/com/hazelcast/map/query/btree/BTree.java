@@ -5,6 +5,7 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.hazelcast.map.query.btree.BTreeLeaf.MAX_ENTRIES_LEAF;
 import static com.hazelcast.map.query.btree.NodeBase.LockType;
@@ -16,6 +17,8 @@ public class BTree<V> implements BTreeIf<V> {
     static final LockType SYNCHRONIZATION_APPROACH = SPIN;
 
     private volatile NodeBase root;
+
+    private final AtomicLong counter = new AtomicLong();
 
     public BTree() {
         root = new BTreeLeaf<V>();
@@ -235,6 +238,7 @@ public class BTree<V> implements BTreeIf<V> {
                     }
                 }
                 V oldValue = leaf.insert(k, v);
+                //counter.incrementAndGet();
                 node.writeUnlock();
                 return oldValue; // success
             }
@@ -617,8 +621,8 @@ public class BTree<V> implements BTreeIf<V> {
         }
     }
 
-
-    ConcurrentIndexValueIterator<V> lookup(Comparable from, Comparable to) {
+    @Override
+    public ConcurrentIndexValueIterator<V> lookup(Comparable from, boolean fromInclusive, Comparable to, boolean toInclusive) {
         int restartCount = 0;
         MutableBoolean needRestart = new MutableBoolean(false);
 
@@ -671,7 +675,7 @@ public class BTree<V> implements BTreeIf<V> {
 
             BTreeLeaf leaf = (BTreeLeaf) node;
 
-            ConcurrentIndexValueIterator it = new ConcurrentIndexValueIterator(this, to);
+            ConcurrentIndexValueIterator it = new ConcurrentIndexValueIterator(this, to, toInclusive);
             // Skip empty nodes
             while (leaf.count == 0) {
                 BTreeLeaf rightChild = leaf.right;
@@ -687,17 +691,23 @@ public class BTree<V> implements BTreeIf<V> {
             }
 
             int pos = leaf.lowerBound(from);
+            boolean skipCurrentKey = false;
             if (pos < leaf.count) {
                 it.nextKey = leaf.keys[pos];
-                it.sequenceNumber = leaf.sequenceNumber;
+                it.nextValue = leaf.payloads[pos];
+                it.sequenceNumber = leaf.sequenceNumber.get();
                 it.currentNode = leaf;
                 it.currentKeyPos = pos;
+                skipCurrentKey = !fromInclusive && leaf.keys[pos].equals(from);
             }
 
             leaf.readUnlockOrRestart(versionNode, needRestart);
             assert !needRestart.booleanValue();
 
-            it.nextKeyIsWithinRange();
+            if (it.nextKeyIsWithinRange() && skipCurrentKey) {
+                it.next();
+                it.hasNext();
+            }
             return it;
         }
     }

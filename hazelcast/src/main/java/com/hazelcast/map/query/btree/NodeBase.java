@@ -4,9 +4,6 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 
 import java.lang.reflect.Array;
 
-import static com.hazelcast.map.query.btree.NodeBase.LockType.OPTIMISTIC;
-import static com.hazelcast.map.query.btree.NodeBase.LockType.SPIN;
-
 class NodeBase implements BTreeLock {
 
     static final int PAGE_SIZE = 8 * 1024;
@@ -22,7 +19,8 @@ class NodeBase implements BTreeLock {
     public enum LockType {
         OPTIMISTIC,
         PESSIMISTIC,
-        SPIN
+        SPIN,
+        NO_SYNC
     }
 
     protected final PageType type;
@@ -35,12 +33,21 @@ class NodeBase implements BTreeLock {
         this.type = type;
         this.count = count;
 
-        if (lockType == OPTIMISTIC) {
-            this.lock = new OptBTreeLock();
-        } else if (lockType == SPIN) {
-            this.lock = new SpinBTreeLock(128).init(1);
-        } else {
-            this.lock = new PessimBTreeLock();
+        switch(lockType) {
+            case OPTIMISTIC:
+                this.lock = new OptBTreeLock();
+                break;
+            case SPIN:
+                this.lock = new SpinBTreeLock(128).init(1);
+                break;
+            case PESSIMISTIC:
+                this.lock = new PessimBTreeLock();
+                break;
+            case NO_SYNC:
+                this.lock = new NoSyncLock();
+                break;
+            default:
+                throw new IllegalStateException(lockType.toString());
         }
     }
 

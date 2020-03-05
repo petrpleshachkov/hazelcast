@@ -9,16 +9,19 @@ public class ConcurrentIndexValueIterator<V> implements Iterator<Comparable> {
 
     private final BTree<V> btree;
     private final Comparable to;
+    private final boolean toInclusive;
     private Comparable lastKey;
     protected Comparable nextKey;
-    private V lastValue;
+    protected V lastValue;
+    protected V nextValue;
     protected BTreeLeaf<V> currentNode;
     protected int currentKeyPos;
     protected long sequenceNumber;
 
-    ConcurrentIndexValueIterator(BTree<V> btree, Comparable to) {
+    ConcurrentIndexValueIterator(BTree<V> btree, Comparable to, boolean toInclusive) {
         this.btree = btree;
         this.to = to;
+        this.toInclusive = toInclusive;
     }
 
     @Override
@@ -36,16 +39,20 @@ public class ConcurrentIndexValueIterator<V> implements Iterator<Comparable> {
             throw new NoSuchElementException();
         }
         lastKey = nextKey;
+        lastValue = nextValue;
         nextKey = null;
+        nextValue = null;
         return lastKey;
     }
 
     public V value() {
-        throw new UnsupportedOperationException();
+        return lastValue;
     }
 
     void nextKey() {
         MutableBoolean needRestart = new MutableBoolean();
+        boolean readKeyOpt = false;
+        boolean skipOptLock = true;
         restart:
         for (; ; ) {
             assert nextKey == null;
@@ -56,14 +63,23 @@ public class ConcurrentIndexValueIterator<V> implements Iterator<Comparable> {
             needRestart.setValue(false);
             byte[] data;
             for (; ; ) {
+
+                // Try optimistically
+                if (!skipOptLock && sequenceNumber == currentNode.sequenceNumber.get()) {
+                    // Page hasn't changed
+                    readKeyOpt = true;
+                    break;
+                }
+
+
                 currentNode.readLockOrRestart(needRestart);
-                if (sequenceNumber == currentNode.sequenceNumber) {
+                if (sequenceNumber == currentNode.sequenceNumber.get()) {
                     // Page hasn't changed
                     break;
                 }
                 /* The page has changed since the previous key. Find the current key again. */
                 currentNode.readUnlockOrRestart(-1, needRestart);
-                ConcurrentIndexValueIterator it = btree.lookup(lastKey, null);
+                ConcurrentIndexValueIterator<V> it = btree.lookup(lastKey, true, null, true);
 
                 if (it.nextKey == null) {
                     // Key has disappeared and we've reached the end
@@ -75,13 +91,23 @@ public class ConcurrentIndexValueIterator<V> implements Iterator<Comparable> {
                 if (!it.nextKey.equals(lastKey)) {
                     // The last key has disappeared from the index and we've already found the next key
                     nextKey = it.nextKey;
+                    nextValue = it.nextValue;
                     nextKeyIsWithinRange();
                     return;
                 }
             }
             Comparable key;
+            V value;
             do {
                 if (currentKeyPos >= currentNode.count - 1) {
+
+                    if (readKeyOpt) {
+                        skipOptLock = true;
+                        readKeyOpt = false;
+                        continue restart;
+                    }
+
+
                     /* try next page and skip it if it is empty */
                     do {
                         BTreeLeaf rightChild = currentNode.right;
@@ -94,7 +120,7 @@ public class ConcurrentIndexValueIterator<V> implements Iterator<Comparable> {
                         assert !needRestart.booleanValue();
                         currentNode.readUnlockOrRestart(-1, needRestart);
                         currentNode = rightChild;
-                        sequenceNumber = currentNode.sequenceNumber;
+                        sequenceNumber = currentNode.sequenceNumber.get();
                         currentKeyPos = 0;
                     } while (currentNode.count == 0);
                 } else {
@@ -102,9 +128,20 @@ public class ConcurrentIndexValueIterator<V> implements Iterator<Comparable> {
                 }
 
                 key = currentNode.keys[currentKeyPos];
+                value = currentNode.payloads[currentKeyPos];
+
+                if (readKeyOpt && !skipOptLock && sequenceNumber != currentNode.sequenceNumber.get()) {
+                    skipOptLock = true;
+                    readKeyOpt = false;
+                    continue restart;
+                }
+
             } while (key.equals(lastKey));
-            currentNode.readUnlockOrRestart(-1, needRestart);
+            if (!readKeyOpt) {
+                currentNode.readUnlockOrRestart(-1, needRestart);
+            }
             nextKey = key;
+            nextValue = value;
             nextKeyIsWithinRange();
             return;
         }
@@ -115,11 +152,14 @@ public class ConcurrentIndexValueIterator<V> implements Iterator<Comparable> {
             return true; // Nothing to check
         }
 
-        if (nextKey != null && nextKey.compareTo(to) <= 0) {
+        if (nextKey != null &&
+                (toInclusive && nextKey.compareTo(to) <= 0
+                        || !toInclusive && nextKey.compareTo(to) < 0)) {
             return true;
         }
         // Passed end key
         nextKey = null;
+        nextValue = null;
         return false;
     }
 }
