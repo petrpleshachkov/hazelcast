@@ -1,6 +1,5 @@
 package com.hazelcast.map.query.btree;
 
-import org.apache.commons.lang3.mutable.MutableBoolean;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;

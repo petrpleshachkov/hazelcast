@@ -1,6 +1,6 @@
 package com.hazelcast.map.query.btree;
 
-import org.apache.commons.lang3.mutable.MutableBoolean;
+
 
 public class NoSyncLock implements BTreeLock {
 

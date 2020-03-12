@@ -1,7 +1,5 @@
 package com.hazelcast.map.query.btree;
 
-import org.apache.commons.lang3.mutable.MutableBoolean;
-
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 

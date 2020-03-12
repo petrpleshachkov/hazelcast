@@ -1,6 +1,5 @@
 package com.hazelcast.map.query.btree;
 
-import org.apache.commons.lang3.mutable.MutableBoolean;
 
 public interface BTreeLock {
 

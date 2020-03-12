@@ -1,7 +1,6 @@
 package com.hazelcast.map.query.btree;
 
 import com.hazelcast.core.HazelcastException;
-import org.apache.commons.lang3.mutable.MutableBoolean;
 
 final class PessimBTreeLock implements BTreeLock {
 

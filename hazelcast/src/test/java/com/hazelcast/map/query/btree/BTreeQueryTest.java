@@ -11,6 +11,7 @@ import org.junit.Test;
 
 import java.io.Serializable;
 
+import static com.hazelcast.config.IndexType.SORTED;
 import static com.hazelcast.config.IndexType.SORTED_BTREE;
 import static org.junit.Assert.assertEquals;
 
@@ -23,8 +24,8 @@ public class BTreeQueryTest extends HazelcastTestSupport {
         HazelcastInstance node = createHazelcastInstance(config);
         final IMap<Integer, Person> map = node.getMap(randomMapName());
 
-        map.addIndex(SORTED_BTREE, "name");
-        map.addIndex(SORTED_BTREE, "age");
+        map.addIndex(SORTED, "name");
+        map.addIndex(SORTED, "age");
 
         // put some data
         for (int i = 0; i < 1000; ++i) {

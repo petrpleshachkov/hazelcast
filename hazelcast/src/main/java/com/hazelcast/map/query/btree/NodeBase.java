@@ -1,7 +1,5 @@
 package com.hazelcast.map.query.btree;
 
-import org.apache.commons.lang3.mutable.MutableBoolean;
-
 import java.lang.reflect.Array;
 
 class NodeBase implements BTreeLock {
