@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import static java.util.concurrent.atomic.AtomicLongFieldUpdater.newUpdater;
 
+// TODO: remove since there is no partitioned indexes in 4.1
 /**
  * The implementation of internal index stats specialized for partitioned indexes.
  * <p>

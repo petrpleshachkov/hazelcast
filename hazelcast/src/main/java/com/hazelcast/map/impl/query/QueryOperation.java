@@ -86,9 +86,10 @@ public class QueryOperation extends AbstractNamedOperation implements ReadonlyOp
         switch (getMapInMemoryFormat()) {
             case BINARY:
             case OBJECT:
+            case NATIVE:
                 result = queryRunner.runIndexOrPartitionScanQueryOnOwnedPartitions(query);
                 return RESPONSE;
-            case NATIVE:
+/*            case NATIVE:
                 BitSet localPartitions = localPartitions();
                 if (localPartitions.cardinality() == 0) {
                     // important to deal with situation of not having any partitions
@@ -96,7 +97,7 @@ public class QueryOperation extends AbstractNamedOperation implements ReadonlyOp
                     return RESPONSE;
                 } else {
                     return new OffloadedImpl(queryRunner, localPartitions);
-                }
+                }*/
             default:
                 throw new IllegalArgumentException("Unsupported in memory format");
         }

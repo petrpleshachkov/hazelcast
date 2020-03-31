@@ -178,8 +178,7 @@ MapContainer {
     }
 
     public boolean shouldUseGlobalIndex() {
-        // for non-native memory populate a single global index
-        return !mapConfig.getInMemoryFormat().equals(NATIVE);
+        return true;
     }
 
     protected static MemoryInfoAccessor getMemoryInfoAccessor() {

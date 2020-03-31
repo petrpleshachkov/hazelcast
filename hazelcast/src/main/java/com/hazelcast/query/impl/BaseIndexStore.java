@@ -80,19 +80,19 @@ public abstract class BaseIndexStore implements IndexStore {
     abstract Comparable canonicalizeScalarForStorage(Comparable value);
 
     void takeWriteLock() {
-        writeLock.lock();
+        //writeLock.lock();
     }
 
     void releaseWriteLock() {
-        writeLock.unlock();
+        //writeLock.unlock();
     }
 
     void takeReadLock() {
-        readLock.lock();
+        //readLock.lock();
     }
 
     void releaseReadLock() {
-        readLock.unlock();
+        //readLock.unlock();
     }
 
     final void copyToMultiResultSet(MultiResultSet resultSet, Map<Data, QueryableEntry> records) {
@@ -136,7 +136,7 @@ public abstract class BaseIndexStore implements IndexStore {
     }
 
     void markIndexStoreExpirableIfNecessary(QueryableEntry record) {
-        assert lock.isWriteLockedByCurrentThread();
+        //assert lock.isWriteLockedByCurrentThread();
         // StoreAdapter is not set in plenty of internal unit tests
         if (record.getStoreAdapter() != null) {
             isIndexStoreExpirable = record.getStoreAdapter().isExpirable();

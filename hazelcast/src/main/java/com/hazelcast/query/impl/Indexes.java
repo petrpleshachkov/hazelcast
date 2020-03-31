@@ -77,9 +77,9 @@ public class Indexes {
         this.indexCopyBehavior = indexCopyBehavior;
         this.serializationService = serializationService;
         this.usesCachedQueryableEntries = usesCachedQueryableEntries;
-        this.stats = createStats(global, statisticsEnabled);
-        this.extractors = extractors == null ? Extractors.newBuilder(serializationService).build() : extractors;
         this.indexProvider = indexProvider == null ? new DefaultIndexProvider() : indexProvider;
+        this.stats = createStats(indexProvider, statisticsEnabled);
+        this.extractors = extractors == null ? Extractors.newBuilder(serializationService).build() : extractors;
         this.queryContextProvider = createQueryContextProvider(this, global, statisticsEnabled);
     }
 
@@ -137,6 +137,7 @@ public class Indexes {
                 partitionStoreAdapter
         );
 
+        // TODO: is there a race condition?
         indexesByName.put(name, index);
         if (index.isEvaluateOnly()) {
             evaluateOnlyAttributeIndexRegistry.register(index);
@@ -437,9 +438,9 @@ public class Indexes {
         }
     }
 
-    private static IndexesStats createStats(boolean global, boolean statisticsEnabled) {
+    private static IndexesStats createStats(IndexProvider indexProvider, boolean statisticsEnabled) {
         if (statisticsEnabled) {
-            return global ? new GlobalIndexesStats() : new PartitionIndexesStats();
+            return new GlobalIndexesStats(indexProvider);
         } else {
             return IndexesStats.EMPTY;
         }

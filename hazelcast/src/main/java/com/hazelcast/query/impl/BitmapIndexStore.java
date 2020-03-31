@@ -314,7 +314,17 @@ public final class BitmapIndexStore extends BaseIndexStore {
     }
 
     @Override
+    public Iterator<QueryableEntry> iterateRecords(Comparable value) {
+        throw makeUnsupportedOperationException();
+    }
+
+    @Override
     public Set<QueryableEntry> getRecords(Set<Comparable> values) {
+        throw makeUnsupportedOperationException();
+    }
+
+    @Override
+    public Iterator<QueryableEntry> iterateRecords(Set<Comparable> value) {
         throw makeUnsupportedOperationException();
     }
 
@@ -324,7 +334,17 @@ public final class BitmapIndexStore extends BaseIndexStore {
     }
 
     @Override
+    public Iterator<QueryableEntry> iterateRecords(Comparison comparison, Comparable value) {
+        throw makeUnsupportedOperationException();
+    }
+
+    @Override
     public Set<QueryableEntry> getRecords(Comparable from, boolean fromInclusive, Comparable to, boolean toInclusive) {
+        throw makeUnsupportedOperationException();
+    }
+
+    @Override
+    public Iterator<QueryableEntry> iterateRecords(Comparable from, boolean fromInclusive, Comparable to, boolean toInclusive) {
         throw makeUnsupportedOperationException();
     }
 

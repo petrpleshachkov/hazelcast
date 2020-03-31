@@ -253,7 +253,7 @@ public class GlobalPerIndexStats implements PerIndexStats {
 
     @Override
     public MemoryAllocator wrapMemoryAllocator(MemoryAllocator memoryAllocator) {
-        throw new UnsupportedOperationException("global indexes are not supposed to use native memory allocators");
+        throw new UnsupportedOperationException("global on-heap indexes are not supposed to use native memory allocators");
     }
 
     @Override

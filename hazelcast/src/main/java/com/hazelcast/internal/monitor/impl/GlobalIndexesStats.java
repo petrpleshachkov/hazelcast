@@ -16,6 +16,8 @@
 
 package com.hazelcast.internal.monitor.impl;
 
+import com.hazelcast.query.impl.IndexProvider;
+
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import static java.util.concurrent.atomic.AtomicLongFieldUpdater.newUpdater;
@@ -35,6 +37,12 @@ public class GlobalIndexesStats implements IndexesStats {
 
     private volatile long queryCount;
     private volatile long indexedQueryCount;
+
+    private final IndexProvider indexProvider;
+
+    public GlobalIndexesStats(IndexProvider indexProvider) {
+        this.indexProvider = indexProvider;
+    }
 
     @Override
     public long getQueryCount() {
@@ -58,7 +66,7 @@ public class GlobalIndexesStats implements IndexesStats {
 
     @Override
     public PerIndexStats createPerIndexStats(boolean ordered, boolean usesCachedQueryableEntries) {
-        return new GlobalPerIndexStats(ordered, usesCachedQueryableEntries);
+        return indexProvider.createPerIndexStats(ordered, usesCachedQueryableEntries);
     }
 
 }

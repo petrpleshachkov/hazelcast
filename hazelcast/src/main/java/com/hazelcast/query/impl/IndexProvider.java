@@ -50,4 +50,7 @@ public interface IndexProvider {
         PerIndexStats stats,
         StoreAdapter storeAdapter
     );
+
+    // TODO: javadoc
+    PerIndexStats createPerIndexStats(boolean ordered, boolean usesCachedQueryableEntries);
 }

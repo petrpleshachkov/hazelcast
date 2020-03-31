@@ -50,6 +50,11 @@ public class NativeMemoryConfig {
      * Default metadata space percentage
      */
     public static final float DEFAULT_METADATA_SPACE_PERCENTAGE = 12.5f;
+
+    /**
+     * Default index space percentage
+     */
+    public static final float DEFAULT_INDEX_SPACE_PERCENTAGE = 30.0f;
     /**
      * Minimum initial memory size in megabytes
      */
@@ -66,6 +71,8 @@ public class NativeMemoryConfig {
     private int minBlockSize = DEFAULT_MIN_BLOCK_SIZE;
     private int pageSize = DEFAULT_PAGE_SIZE;
     private float metadataSpacePercentage = DEFAULT_METADATA_SPACE_PERCENTAGE;
+    private float indexSpacePercentage = DEFAULT_INDEX_SPACE_PERCENTAGE;
+
     /**
      * Path to the non-volatile memory directory. {@code null} indicates the
      * standard RAM is used.
@@ -218,6 +225,29 @@ public class NativeMemoryConfig {
      */
     public NativeMemoryConfig setMetadataSpacePercentage(float metadataSpacePercentage) {
         this.metadataSpacePercentage = metadataSpacePercentage;
+        return this;
+    }
+
+    /**
+     * Returns the percentage of native memory space to be used to store indices data.
+     * Default value is {@link #DEFAULT_INDEX_SPACE_PERCENTAGE}.
+     * <p>
+     * <strong>This configuration is used only by {@link MemoryAllocatorType#POOLED}, otherwise ignored.</strong>
+     */
+    public float getIndexSpacePercentage() {
+        return indexSpacePercentage;
+    }
+
+    /**
+     * Sets the percentage of native memory space to be used to store indices data.
+     * <p>
+     * <strong>This configuration is used only by {@link MemoryAllocatorType#POOLED}, otherwise ignored.</strong>
+     *
+     * @param indexSpacePercentage percentage of index space
+     * @return this {@link NativeMemoryConfig} instance
+     */
+    public NativeMemoryConfig setIndexSpacePercentage(float indexSpacePercentage) {
+        this.indexSpacePercentage = indexSpacePercentage;
         return this;
     }
 

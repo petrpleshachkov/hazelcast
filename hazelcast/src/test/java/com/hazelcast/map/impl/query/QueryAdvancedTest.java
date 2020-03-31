@@ -119,8 +119,8 @@ public class QueryAdvancedTest extends HazelcastTestSupport {
         HazelcastInstance instance = createHazelcastInstance(config);
 
         IMap<String, Employee> map = instance.getMap(mapName);
-        map.addIndex(IndexType.HASH, "name");
-        map.addIndex(IndexType.SORTED, "age");
+        //map.addIndex(IndexType.HASH, "name");
+        //map.addIndex(IndexType.SORTED, "age");
         map.addIndex(IndexType.HASH, "active");
 
         int passiveEmployees = 5;

@@ -22,6 +22,7 @@ import com.hazelcast.query.Predicate;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -125,6 +126,11 @@ public class OrderedIndexStore extends BaseSingleValueIndexStore {
     }
 
     @Override
+    public Iterator<QueryableEntry> iterateRecords(Comparable value) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public Set<QueryableEntry> getRecords(Set<Comparable> values) {
         takeReadLock();
         try {
@@ -144,6 +150,11 @@ public class OrderedIndexStore extends BaseSingleValueIndexStore {
         } finally {
             releaseReadLock();
         }
+    }
+
+    @Override
+    public Iterator<QueryableEntry> iterateRecords(Set<Comparable> value) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -178,6 +189,11 @@ public class OrderedIndexStore extends BaseSingleValueIndexStore {
     }
 
     @Override
+    public Iterator<QueryableEntry> iterateRecords(Comparison comparison, Comparable value) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public Set<QueryableEntry> getRecords(Comparable from, boolean fromInclusive, Comparable to, boolean toInclusive) {
         takeReadLock();
         try {
@@ -200,6 +216,11 @@ public class OrderedIndexStore extends BaseSingleValueIndexStore {
         } finally {
             releaseReadLock();
         }
+    }
+
+    @Override
+    public Iterator<QueryableEntry> iterateRecords(Comparable from, boolean fromInclusive, Comparable to, boolean toInclusive) {
+        throw new UnsupportedOperationException();
     }
 
     /**

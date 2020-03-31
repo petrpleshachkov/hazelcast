@@ -102,6 +102,8 @@ public class PartitionContainer {
         keyLoader.setHasBackup(mapConfig.getTotalBackupCount() > 0);
         keyLoader.setMapOperationProvider(serviceContext.getMapOperationProvider(name));
 
+        assert mapContainer.isGlobalIndexEnabled();
+        // TODO: remove this code block
         if (!mapContainer.isGlobalIndexEnabled()) {
             Indexes indexesForMap = mapContainer.createIndexes(false);
             indexes.putIfAbsent(name, indexesForMap);
