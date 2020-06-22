@@ -50,4 +50,6 @@ public interface IndexProvider {
             PerIndexStats stats,
             StoreAdapter storeAdapter
     );
+
+    PerIndexStats createPerIndexStats(boolean ordered, boolean usesCachedQueryableEntries);
 }
