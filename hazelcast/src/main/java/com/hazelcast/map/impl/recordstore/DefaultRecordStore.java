@@ -1327,8 +1327,8 @@ public class DefaultRecordStore extends AbstractEvictableRecordStore {
     }
 
     private void clearStorage(boolean isDuringShutdown) {
-        storage.clear(isDuringShutdown);
         mutationObserver.onClear();
+        storage.clear(isDuringShutdown);
     }
 
     private void clearLockStore() {
