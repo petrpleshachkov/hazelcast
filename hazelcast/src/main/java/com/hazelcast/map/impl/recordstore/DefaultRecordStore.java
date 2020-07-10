@@ -1270,10 +1270,10 @@ public class DefaultRecordStore extends AbstractEvictableRecordStore {
 
     @Override
     public void reset() {
+        mutationObserver.onReset();
         mapDataStore.reset();
         storage.clear(false);
         stats.reset();
-        mutationObserver.onReset();
     }
 
     @Override
