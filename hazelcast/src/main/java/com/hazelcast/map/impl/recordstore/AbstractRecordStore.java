@@ -204,8 +204,8 @@ abstract class AbstractRecordStore implements RecordStore<Record> {
         if (mapStoreOperation) {
             newValue = putIntoMapStore(record, key, newValue, now, transactionId);
         }
-        storage.updateRecordValue(key, record, newValue);
         mutationObserver.onUpdateRecord(key, record, oldValue, newValue, backup);
+        storage.updateRecordValue(key, record, newValue);
     }
 
     protected Record putNewRecord(Data key, Object oldValue, Object newValue, long ttlMillis,
