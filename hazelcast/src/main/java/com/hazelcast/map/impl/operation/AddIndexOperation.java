@@ -17,6 +17,7 @@
 package com.hazelcast.map.impl.operation;
 
 import com.hazelcast.config.IndexConfig;
+import com.hazelcast.core.HazelcastException;
 import com.hazelcast.internal.serialization.SerializationService;
 import com.hazelcast.map.impl.MapDataSerializerHook;
 import com.hazelcast.map.impl.MapService;
@@ -84,6 +85,11 @@ public class AddIndexOperation extends MapOperation
 
         Indexes indexes = mapContainer.getIndexes(partitionId);
         RecordStoreAdapter recordStoreAdapter = new RecordStoreAdapter(recordStore);
+
+        if (indexes.isGlobal()) {
+            throw new HazelcastException("Global index disabled  mapContainer.isGlobalIndexEnabled() " + mapContainer.isGlobalIndexEnabled()
+            );
+        }
         InternalIndex index = indexes.addOrGetIndex(config, indexes.isGlobal() ? null : recordStoreAdapter);
         if (index.hasPartitionIndexed(partitionId)) {
             return;
