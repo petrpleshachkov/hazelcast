@@ -37,6 +37,8 @@ import com.hazelcast.spi.impl.operationservice.PartitionAwareOperation;
 
 import java.io.IOException;
 
+import static com.hazelcast.config.InMemoryFormat.NATIVE;
+
 public class AddIndexOperation extends MapOperation
         implements PartitionAwareOperation, MutatingOperation, BackupAwareOperation {
     /**
@@ -86,9 +88,8 @@ public class AddIndexOperation extends MapOperation
         Indexes indexes = mapContainer.getIndexes(partitionId);
         RecordStoreAdapter recordStoreAdapter = new RecordStoreAdapter(recordStore);
 
-        if (indexes.isGlobal()) {
-            throw new HazelcastException("Global index disabled  mapContainer.isGlobalIndexEnabled() " + mapContainer.isGlobalIndexEnabled()
-            );
+        if (mapContainer.getMapConfig().getInMemoryFormat() == NATIVE && indexes.isGlobal()) {
+            throw new HazelcastException("Global index disabled  mapContainer.isGlobalIndexEnabled() " + mapContainer.isGlobalIndexEnabled());
         }
         InternalIndex index = indexes.addOrGetIndex(config, indexes.isGlobal() ? null : recordStoreAdapter);
         if (index.hasPartitionIndexed(partitionId)) {
