@@ -4,8 +4,7 @@
       * [Non-goals](#non-goals)
 + [User Interaction](#user-interaction)
   - [API design and/or Prototypes](#api-design-andor-prototypes)
-      * [Java marker interface](#java-marker-interface)
-      * [Declarative configuration](#declarative-configuration)
+      * [Java marker interface](#ORDER BY clause example)
 + [Technical Design](#technical-design)
 + [Testing Criteria](#testing-criteria)
 
@@ -23,13 +22,15 @@ the Mustang SQL engine should be able to parse the grammatical constructions and
 for them.
 
 However, we assume that we always have indexes supporting query ordering. Therefore, a sorting on the local member
-comes for free from the indexes. If there is no supporting index, an exception is thrown.
+comes for free from the indexes. If there is no supporting index, an engine throws an exception.
+
+To support sorting by multiple fields, an engine requires a matching (on the same fields) composite index.  
 
 The sorting feature will work on both on-heap and off-heap IMap data structures. 
 
 ##### Non-goals
 
-Currently the sorting will only work if there is/are index(es) supporting the query ordering. Otherwise an exception 
+Currently, the sorting will only work if there is/are index(es) supporting the query ordering. Otherwise, an exception 
 will be thrown. It means we don't perform sorting on the local member and don't need a memory management to 
 control memory consumption by memory-intensive sorting operation. However, sorting pre-sorted sub-results coming
 from cluster members and returning a user globally ordered results is a goal. 
@@ -93,6 +94,15 @@ instantly lock the required left B+tree node (to avoid busy wait loop),
 and restart the navigation operation from the B+tree root node.   
 
 #### Sorting rules
+The Calcite rules set should be extended to accomodate ORDER BY clause. The rule'll define how the sorting 
+should be done depending on the pre-sorting conditions of the descendant operators. 
+
+The rule will support a general case when the descendant operators not necessarily produce a pre-sorted result. 
+However, if a sorting operator produced that requires local sorting on the member, the execution of such operator 
+will throw an exception. 
+
+In other words, the parsing and optimization framework will support a generic case, while in runtime some
+operators may throw NOT_SUPPORTED exception.    
 
 ### Testing Criteria
 
