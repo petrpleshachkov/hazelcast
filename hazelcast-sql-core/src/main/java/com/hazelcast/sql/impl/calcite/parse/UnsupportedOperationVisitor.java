@@ -144,6 +144,10 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.LTRIM);
         SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.RTRIM);
         SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.BTRIM);
+
+        // Sorting
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.DESC);
+
     }
 
     private final SqlValidatorCatalogReader catalogReader;
@@ -289,7 +293,7 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
                 processSelect((SqlSelect) call);
 
                 return;
-
+            case DESCENDING:
             case OTHER:
             case OTHER_FUNCTION:
                 processOther(call);
@@ -301,10 +305,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
     }
 
     private void processSelect(SqlSelect select) {
-        if (select.hasOrderBy()) {
-            throw unsupported(select.getOrderList(), SqlKind.ORDER_BY);
-        }
-
         if (select.getGroup() != null && select.getGroup().size() > 0) {
             throw unsupported(select.getGroup(), "GROUP BY");
         }
@@ -331,10 +331,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
     private CalciteContextException unsupported(SqlCall call) {
         String name = call.getOperator().getName();
         return unsupported(call, name.replace("$", "").replace('_', ' '));
-    }
-
-    private CalciteContextException unsupported(SqlNode node, SqlKind kind) {
-        return unsupported(node, kind.sql.replace('_', ' '));
     }
 
     private CalciteContextException unsupported(SqlNode node, String name) {
