@@ -167,7 +167,8 @@ public final class SortPhysicalRule extends RelOptRule {
     }
 
     private RelNode createLocalNoSort(RelNode input, RexNode fetch, RexNode offset) {
-        if (fetch == null) {
+        return input;
+/*        if (fetch == null) {
             assert offset == null;
 
             return input;
@@ -179,7 +180,7 @@ public final class SortPhysicalRule extends RelOptRule {
                 fetch,
                 offset
             );
-        }
+        }*/
     }
 
     private static RelNode createMerge(RelNode physicalInput, SortLogicalRel logicalSort) {

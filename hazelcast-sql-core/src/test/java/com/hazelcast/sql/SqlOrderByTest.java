@@ -283,7 +283,7 @@ public class SqlOrderByTest extends SqlTestSupport {
 //            + " ORDER BY " + bigIntValField + " OFFSET 4096 FETCH NEXT 5 ROWS ONLY\n";
 
          String sql = "SELECT " + intValField + ", " + bigIntValField + " FROM " + mapName()
-             + " ORDER BY " + bigIntValField + " OFFSET 4090 FETCH NEXT 5 ROWS ONLY\n";
+             + " ORDER BY " + bigIntValField + " OFFSET 4093 FETCH NEXT 5 ROWS ONLY\n";
 
 
         try (SqlResult res = query(sql)) {
