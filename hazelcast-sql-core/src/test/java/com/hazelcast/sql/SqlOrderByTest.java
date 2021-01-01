@@ -277,7 +277,7 @@ public class SqlOrderByTest extends SqlTestSupport {
         map.addIndex(indexConfig2);
 
         String sql = "SELECT " + intValField + ", " + bigIntValField + " FROM " + mapName()
-            + " WHERE " + intValField + " = 1 ORDER BY " + bigIntValField + " OFFSET 100 ROWS";
+            + " ORDER BY " + bigIntValField + " FETCH NEXT 5 ROWS ONLY\n";
 
         try (SqlResult res = query(sql)) {
 
@@ -286,6 +286,7 @@ public class SqlOrderByTest extends SqlTestSupport {
             Iterator<SqlRow> rowIterator = res.iterator();
 
             SqlRow prevRow = null;
+            int count = 0;
             while (rowIterator.hasNext()) {
                 SqlRow row = rowIterator.next();
 
@@ -293,9 +294,11 @@ public class SqlOrderByTest extends SqlTestSupport {
                     Collections.singletonList(false), rowMetadata);
 
                 prevRow = row;
+                count++;
             }
 
             assertThrows(NoSuchElementException.class, rowIterator::next);
+            assertEquals(5, count);
 
             assertThrows(IllegalStateException.class, res::iterator);
         }
