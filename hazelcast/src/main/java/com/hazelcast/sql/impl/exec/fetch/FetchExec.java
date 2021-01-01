@@ -16,6 +16,7 @@
 
 package com.hazelcast.sql.impl.exec.fetch;
 
+import com.hazelcast.sql.impl.row.EmptyRowBatch;
 import com.hazelcast.sql.impl.worker.QueryFragmentContext;
 import com.hazelcast.sql.impl.exec.AbstractUpstreamAwareExec;
 import com.hazelcast.sql.impl.exec.Exec;
@@ -54,7 +55,7 @@ public class FetchExec extends AbstractUpstreamAwareExec {
             RowBatch batch = state.consumeBatch();
             RowBatch newBatch = fetch.apply(batch);
 
-            boolean done = fetch.isDone();
+            boolean done = fetch.isDone() || state.isDone();
 
             if (done || newBatch.getRowCount() > 0) {
                 currentBatch = newBatch;

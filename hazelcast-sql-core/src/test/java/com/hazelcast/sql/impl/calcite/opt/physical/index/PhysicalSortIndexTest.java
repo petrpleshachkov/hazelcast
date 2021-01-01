@@ -104,6 +104,19 @@ public class PhysicalSortIndexTest extends IndexOptimizerTestSupport {
     }
 
     @Test
+    public void testTrivialSortWithFetch() {
+        assertPlan(
+            optimizePhysical("SELECT f1, f2, f3 FROM p ORDER BY f1 OFFSET 4090 FETCH NEXT 5 ROWS ONLY", 2),
+            plan(
+                planRow(0, RootPhysicalRel.class, "", 100d),
+                planRow(1, SortMergeExchangePhysicalRel.class, "collation=[[0]]", 100d),
+                planRow(2, MapIndexScanPhysicalRel.class, "table=[[hazelcast, p[projects=[1, 2, 3]]]], index=[sorted_f1_f3], indexExp=[null], remainderExp=[null]", 100d)
+            )
+        );
+    }
+
+
+    @Test
     public void testCompositeSort() {
         assertPlan(
                 optimizePhysical("SELECT f1, f3 FROM p ORDER BY f1, f3", 2),

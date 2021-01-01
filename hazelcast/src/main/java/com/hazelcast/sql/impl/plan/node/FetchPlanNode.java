@@ -76,7 +76,7 @@ public class FetchPlanNode extends UniInputPlanNode implements IdentifiedDataSer
 
     @Override
     public int getClassId() {
-        return SqlDataSerializerHook.NODE_FILTER;
+        return SqlDataSerializerHook.NODE_FETCH;
     }
 
     @Override

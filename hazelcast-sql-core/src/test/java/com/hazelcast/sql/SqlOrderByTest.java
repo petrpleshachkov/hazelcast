@@ -276,8 +276,15 @@ public class SqlOrderByTest extends SqlTestSupport {
         map.addIndex(indexConfig1);
         map.addIndex(indexConfig2);
 
-        String sql = "SELECT " + intValField + ", " + bigIntValField + " FROM " + mapName()
-            + " ORDER BY " + bigIntValField + " FETCH NEXT 5 ROWS ONLY\n";
+//        String sql = "SELECT " + intValField + ", " + bigIntValField + " FROM " + mapName()
+//            + " ORDER BY " + bigIntValField + " OFFSET 100000 FETCH NEXT 5 ROWS ONLY\n";
+
+//        String sql = "SELECT " + intValField + ", " + bigIntValField + " FROM " + mapName()
+//            + " ORDER BY " + bigIntValField + " OFFSET 4096 FETCH NEXT 5 ROWS ONLY\n";
+
+         String sql = "SELECT " + intValField + ", " + bigIntValField + " FROM " + mapName()
+             + " ORDER BY " + bigIntValField + " OFFSET 4090 FETCH NEXT 5 ROWS ONLY\n";
+
 
         try (SqlResult res = query(sql)) {
 
