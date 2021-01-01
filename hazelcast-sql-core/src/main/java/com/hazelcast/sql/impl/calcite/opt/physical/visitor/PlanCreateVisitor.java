@@ -362,6 +362,9 @@ public class PlanCreateVisitor implements PhysicalRelVisitor {
             ascs[i] = !direction.isDescending();
         }
 
+        Expression fetch = convertExpression(FetchOffsetPlanNodeFieldTypeProvider.INSTANCE, rel.getFetch());
+        Expression offset = convertExpression(FetchOffsetPlanNodeFieldTypeProvider.INSTANCE, rel.getOffset());
+
         // Create a receiver and push it to stack.
         ReceiveSortMergePlanNode receiveNode = new ReceiveSortMergePlanNode(
             id,
@@ -369,8 +372,8 @@ public class PlanCreateVisitor implements PhysicalRelVisitor {
             sendNode.getSchema().getTypes(),
             columnIndexes,
             ascs,
-            rel.getFetch(),
-            rel.getOffset()
+            fetch,
+            offset
         );
 
         pushUpstream(receiveNode);
