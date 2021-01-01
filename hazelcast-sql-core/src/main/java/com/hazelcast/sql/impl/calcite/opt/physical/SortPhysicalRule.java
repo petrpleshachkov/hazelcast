@@ -16,6 +16,8 @@
 
 package com.hazelcast.sql.impl.calcite.opt.physical;
 
+import com.hazelcast.core.HazelcastException;
+import com.hazelcast.sql.HazelcastSqlException;
 import com.hazelcast.sql.impl.calcite.opt.HazelcastConventions;
 import com.hazelcast.sql.impl.calcite.opt.OptUtils;
 import com.hazelcast.sql.impl.calcite.opt.distribution.DistributionTrait;
@@ -28,9 +30,11 @@ import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rex.RexNode;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -87,7 +91,7 @@ public final class SortPhysicalRule extends RelOptRule {
             if (requiresLocalSort) {
                 rel = createLocalSort(logicalSort, physicalInput);
             } else {
-                rel = createLocalNoSort(physicalInput);
+                rel = createLocalNoSort(physicalInput, logicalSort.fetch, logicalSort.offset);
             }
 
             // Add merge phase if needed.
@@ -162,8 +166,20 @@ public final class SortPhysicalRule extends RelOptRule {
         );
     }
 
-    private RelNode createLocalNoSort(RelNode input) {
-        return input;
+    private RelNode createLocalNoSort(RelNode input, RexNode fetch, RexNode offset) {
+        if (fetch == null) {
+            assert offset == null;
+
+            return input;
+        } else {
+            return new FetchPhysicalRel(
+                input.getCluster(),
+                input.getTraitSet(),
+                input,
+                fetch,
+                offset
+            );
+        }
     }
 
     private static RelNode createMerge(RelNode physicalInput, SortLogicalRel logicalSort) {
@@ -172,15 +188,47 @@ public final class SortPhysicalRule extends RelOptRule {
             OptUtils.getDistributionDef(physicalInput).getTraitRoot()
         );
 
-        assert !logicalSort.getCollation().getFieldCollations().isEmpty();
+        boolean fetchOnly = logicalSort.getCollation().getFieldCollations().isEmpty();
 
-        // Perform merge with sorting.
-        return new SortMergeExchangePhysicalRel(
-            logicalSort.getCluster(),
-            traitSet,
-            physicalInput,
-            logicalSort.getCollation()
-        );
+        if (fetchOnly) {
+            throw new HazelcastException("Not supported yet");
+/*
+            // Perform merge without sorting.
+            RelNode rel = new UnicastExchangePhysicalRel(
+                logicalSort.getCluster(),
+                traitSet,
+                physicalInput,
+                Collections.emptyList()
+            );
+
+            boolean limit = logicalSort.fetch != null;
+
+            // TODO : what if offset != null?
+
+            if (limit) {
+                rel = new FetchPhysicalRel(
+                    logicalSort.getCluster(),
+                    rel.getTraitSet(),
+                    rel,
+                    logicalSort.fetch,
+                    logicalSort.offset
+                );
+            }
+
+            return rel;
+            */
+        } else {
+
+            // Perform merge with sorting.
+            return new SortMergeExchangePhysicalRel(
+                logicalSort.getCluster(),
+                traitSet,
+                physicalInput,
+                logicalSort.getCollation(),
+                logicalSort.fetch,
+                logicalSort.offset
+            );
+        }
 
     }
 }

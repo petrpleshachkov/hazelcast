@@ -16,6 +16,7 @@
 
 package com.hazelcast.sql.impl.calcite.opt.physical.visitor;
 
+import com.hazelcast.sql.impl.calcite.opt.physical.FetchPhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.FilterPhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.MapIndexScanPhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.MapScanPhysicalRel;
@@ -39,4 +40,6 @@ public interface PhysicalRelVisitor {
     void onValues(ValuesPhysicalRel rel);
     void onSort(SortPhysicalRel rel);
     void onSortMergeExchange(SortMergeExchangePhysicalRel rel);
+    void onFetch(FetchPhysicalRel rel);
+
 }
