@@ -49,7 +49,9 @@ public final class SortLogicalRule extends ConverterRule {
             sort.getCluster(),
             OptUtils.toLogicalConvention(sort.getTraitSet()),
             OptUtils.toLogicalInput(input),
-            sort.getCollation()
+            sort.getCollation(),
+            sort.offset,
+            sort.fetch
         );
     }
 }
