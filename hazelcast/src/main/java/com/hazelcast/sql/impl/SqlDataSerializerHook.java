@@ -70,6 +70,7 @@ import com.hazelcast.sql.impl.operation.QueryExecuteOperation;
 import com.hazelcast.sql.impl.operation.QueryExecuteOperationFragment;
 import com.hazelcast.sql.impl.operation.QueryFlowControlExchangeOperation;
 import com.hazelcast.sql.impl.plan.node.EmptyPlanNode;
+import com.hazelcast.sql.impl.plan.node.FetchPlanNode;
 import com.hazelcast.sql.impl.plan.node.FilterPlanNode;
 import com.hazelcast.sql.impl.plan.node.MapIndexScanPlanNode;
 import com.hazelcast.sql.impl.plan.node.MapScanPlanNode;
@@ -174,8 +175,9 @@ public class SqlDataSerializerHook implements DataSerializerHook {
 
     public static final int NODE_UNICAST_SEND = 62;
     public static final int NODE_RECEIVE_MERGE_SORT = 63;
+    public static final int NODE_FETCH = 64;
 
-    public static final int LEN = NODE_RECEIVE_MERGE_SORT + 1;
+    public static final int LEN = NODE_FETCH + 1;
 
     @Override
     public int getFactoryId() {
@@ -265,6 +267,7 @@ public class SqlDataSerializerHook implements DataSerializerHook {
 
         constructors[NODE_UNICAST_SEND] = arg -> new UnicastSendPlanNode();
         constructors[NODE_RECEIVE_MERGE_SORT] = arg -> new ReceiveSortMergePlanNode();
+        constructors[NODE_FETCH] = arg -> new FetchPlanNode();
 
         return new ArrayDataSerializableFactory(constructors);
     }
