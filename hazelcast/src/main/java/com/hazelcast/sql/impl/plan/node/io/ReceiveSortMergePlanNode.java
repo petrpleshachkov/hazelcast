@@ -21,6 +21,7 @@ import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.IdentifiedDataSerializable;
 import com.hazelcast.sql.impl.SqlDataSerializerHook;
+import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.plan.node.PlanNodeSchema;
 import com.hazelcast.sql.impl.plan.node.PlanNodeVisitor;
 import com.hazelcast.sql.impl.plan.node.ZeroInputPlanNode;
@@ -56,6 +57,17 @@ public class ReceiveSortMergePlanNode extends ZeroInputPlanNode implements EdgeA
      */
     private boolean[] ascs;
 
+    /**
+     * Limit expression.
+     */
+    private Expression fetch;
+
+    /**
+     * Offset expression.
+     */
+    private Expression offset;
+
+
     public ReceiveSortMergePlanNode() {
         // No-op.
     }
@@ -65,7 +77,9 @@ public class ReceiveSortMergePlanNode extends ZeroInputPlanNode implements EdgeA
         int edgeId,
         List<QueryDataType> fieldTypes,
         List<Integer> columnIndexes,
-        boolean[] ascs
+        boolean[] ascs,
+        Expression fetch,
+        Expression offset
     ) {
         super(id);
 
@@ -73,6 +87,8 @@ public class ReceiveSortMergePlanNode extends ZeroInputPlanNode implements EdgeA
         this.fieldTypes = fieldTypes;
         this.columnIndexes = columnIndexes;
         this.ascs = ascs;
+        this.fetch = fetch;
+        this.offset = offset;
     }
 
     public List<Integer> getColumnIndexes() {
@@ -81,6 +97,14 @@ public class ReceiveSortMergePlanNode extends ZeroInputPlanNode implements EdgeA
 
     public boolean[] getAscs() {
         return ascs;
+    }
+
+    public Expression getFetch() {
+        return fetch;
+    }
+
+    public Expression getOffset() {
+        return offset;
     }
 
     @Override
@@ -112,6 +136,8 @@ public class ReceiveSortMergePlanNode extends ZeroInputPlanNode implements EdgeA
         for (int i = 0; i < ascs.length; ++i) {
             out.writeBoolean(ascs[i]);
         }
+        out.writeObject(fetch);
+        out.writeObject(offset);
     }
 
     @Override
@@ -124,6 +150,8 @@ public class ReceiveSortMergePlanNode extends ZeroInputPlanNode implements EdgeA
         for (int i = 0; i < ascsLength; ++i) {
             ascs[i] = in.readBoolean();
         }
+        fetch = in.readObject();
+        offset = in.readObject();
     }
 
     @Override
@@ -138,7 +166,7 @@ public class ReceiveSortMergePlanNode extends ZeroInputPlanNode implements EdgeA
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, edgeId, columnIndexes, fieldTypes, ascs);
+        return Objects.hash(id, edgeId, columnIndexes, fieldTypes, ascs, fetch, offset);
     }
 
     @Override
@@ -155,12 +183,13 @@ public class ReceiveSortMergePlanNode extends ZeroInputPlanNode implements EdgeA
 
         return id == that.id && edgeId == that.edgeId
             && columnIndexes.equals(that.columnIndexes) && fieldTypes.equals(that.fieldTypes)
-            && Arrays.equals(ascs, that.ascs);
+            && Arrays.equals(ascs, that.ascs) && Objects.equals(fetch, that.fetch)
+            && Objects.equals(offset, that.offset);
     }
 
     @Override
     public String toString() {
         return getClass().getSimpleName() + "{id=" + id + ", edgeId=" + edgeId + ", columnIndexes=" + columnIndexes
-            + ", ascs=" + ascs + '}';
+            + ", ascs=" + ascs + ", fetch=" + fetch + ", offset=" + offset +'}';
     }
 }

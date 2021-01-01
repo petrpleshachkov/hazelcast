@@ -18,10 +18,12 @@ package com.hazelcast.sql.impl.exec.io;
 
 import com.hazelcast.sql.impl.exec.AbstractExec;
 import com.hazelcast.sql.impl.exec.IterationResult;
+import com.hazelcast.sql.impl.exec.fetch.Fetch;
 import com.hazelcast.sql.impl.exec.sort.MergeSort;
 import com.hazelcast.sql.impl.exec.sort.MergeSortSource;
 import com.hazelcast.sql.impl.exec.sort.SortKey;
 import com.hazelcast.sql.impl.exec.sort.SortKeyComparator;
+import com.hazelcast.sql.impl.expression.Expression;
 import com.hazelcast.sql.impl.row.EmptyRowBatch;
 import com.hazelcast.sql.impl.row.ListRowBatch;
 import com.hazelcast.sql.impl.row.Row;
@@ -50,6 +52,9 @@ public class ReceiveSortMergeExec extends AbstractExec {
      */
     private final MergeSort sorter;
 
+    /** Fetch processor. */
+    private final Fetch fetch;
+
     /**
      * Current batch.
      */
@@ -59,7 +64,9 @@ public class ReceiveSortMergeExec extends AbstractExec {
         int id,
         StripedInbox inbox,
         List<Integer> columnIndexes,
-        boolean[] ascs
+        boolean[] ascs,
+        Expression fetch,
+        Expression offset
     ) {
         super(id);
 
@@ -73,11 +80,17 @@ public class ReceiveSortMergeExec extends AbstractExec {
         }
 
         sorter = new MergeSort(sources, new SortKeyComparator(ascs));
+
+        this.fetch = fetch != null ? new Fetch(fetch, offset) : null;
     }
 
     @Override
     protected void setup0(QueryFragmentContext ctx) {
         inbox.setup();
+
+        if (fetch != null) {
+            fetch.setup(ctx);
+        }
     }
 
     @Override
@@ -91,6 +104,15 @@ public class ReceiveSortMergeExec extends AbstractExec {
             return done ? IterationResult.FETCHED_DONE : IterationResult.WAIT;
         } else {
             RowBatch batch = new ListRowBatch(rows);
+
+            if (fetch != null) {
+                batch = fetch.apply(batch);
+                done |= fetch.isDone();
+
+                if (batch.getRowCount() == 0 && !done) {
+                    continue;
+                }
+            }
 
             curBatch = batch;
 

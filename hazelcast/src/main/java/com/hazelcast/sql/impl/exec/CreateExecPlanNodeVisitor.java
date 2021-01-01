@@ -224,7 +224,9 @@ public class CreateExecPlanNodeVisitor implements PlanNodeVisitor {
             node.getId(),
             inbox,
             node.getColumnIndexes(),
-            node.getAscs()
+            node.getAscs(),
+            node.getFetch(),
+            node.getOffset()
         );
 
         push(res);
