@@ -20,6 +20,7 @@ import com.hazelcast.internal.serialization.InternalSerializationService;
 import com.hazelcast.internal.util.collection.PartitionIdSet;
 import com.hazelcast.map.impl.MapContainer;
 import com.hazelcast.sql.impl.NodeServiceProvider;
+import com.hazelcast.sql.impl.exec.aggregate.AggregateExec;
 import com.hazelcast.sql.impl.exec.fetch.FetchExec;
 import com.hazelcast.sql.impl.exec.io.ReceiveSortMergeExec;
 import com.hazelcast.sql.impl.exec.io.StripedInbox;
@@ -38,6 +39,7 @@ import com.hazelcast.sql.impl.operation.QueryExecuteOperation;
 import com.hazelcast.sql.impl.operation.QueryExecuteOperationFragment;
 import com.hazelcast.sql.impl.operation.QueryExecuteOperationFragmentMapping;
 import com.hazelcast.sql.impl.operation.QueryOperationHandler;
+import com.hazelcast.sql.impl.plan.node.AggregatePlanNode;
 import com.hazelcast.sql.impl.plan.node.EmptyPlanNode;
 import com.hazelcast.sql.impl.plan.node.FetchPlanNode;
 import com.hazelcast.sql.impl.plan.node.MapIndexScanPlanNode;
@@ -247,6 +249,20 @@ public class CreateExecPlanNodeVisitor implements PlanNodeVisitor {
 
         push(res);
     }
+
+    @Override
+    public void onAggregateNode(AggregatePlanNode node) {
+        Exec res = new AggregateExec(
+            node.getId(),
+            pop(),
+            node.getGroupKey(),
+            node.getExpressions(),
+            node.getSortedGroupKeySize()
+        );
+
+        push(res);
+    }
+
 
 
     /**

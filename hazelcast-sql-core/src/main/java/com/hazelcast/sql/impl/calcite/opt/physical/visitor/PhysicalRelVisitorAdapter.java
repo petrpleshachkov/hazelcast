@@ -25,8 +25,10 @@ import com.hazelcast.sql.impl.calcite.opt.physical.ProjectPhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.RootPhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.SortPhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.ValuesPhysicalRel;
+import com.hazelcast.sql.impl.calcite.opt.physical.aggregate.AggregatePhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.exchange.RootExchangePhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.exchange.SortMergeExchangePhysicalRel;
+import com.hazelcast.sql.impl.calcite.opt.physical.exchange.UnicastExchangePhysicalRel;
 
 /**
  * Convenient adapter for physical visitor which delegates all calls to a single method.
@@ -49,6 +51,11 @@ public abstract class PhysicalRelVisitorAdapter implements PhysicalRelVisitor {
 
     @Override
     public void onRootExchange(RootExchangePhysicalRel rel) {
+        onNode(rel);
+    }
+
+    @Override
+    public void onUnicastExchange(UnicastExchangePhysicalRel rel) {
         onNode(rel);
     }
 
@@ -81,6 +88,12 @@ public abstract class PhysicalRelVisitorAdapter implements PhysicalRelVisitor {
     public void onSort(SortPhysicalRel rel) {
         onNode(rel);
     }
+
+    @Override
+    public void onAggregate(AggregatePhysicalRel rel) {
+        onNode(rel);
+    }
+
 
     protected abstract void onNode(PhysicalRel rel);
 }

@@ -33,18 +33,25 @@ import com.hazelcast.sql.impl.calcite.opt.physical.ProjectPhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.RootPhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.SortPhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.ValuesPhysicalRel;
+import com.hazelcast.sql.impl.calcite.opt.physical.aggregate.AggregatePhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.exchange.AbstractExchangePhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.exchange.RootExchangePhysicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.exchange.SortMergeExchangePhysicalRel;
+import com.hazelcast.sql.impl.calcite.opt.physical.exchange.UnicastExchangePhysicalRel;
 import com.hazelcast.sql.impl.calcite.schema.HazelcastTable;
 import com.hazelcast.sql.impl.calcite.validate.types.HazelcastTypeUtils;
+import com.hazelcast.sql.impl.expression.ColumnExpression;
 import com.hazelcast.sql.impl.expression.Expression;
+import com.hazelcast.sql.impl.expression.aggregate.AggregateExpression;
+import com.hazelcast.sql.impl.expression.aggregate.SumAggregateExpression;
 import com.hazelcast.sql.impl.extract.QueryPath;
 import com.hazelcast.sql.impl.partitioner.AllFieldsRowPartitioner;
+import com.hazelcast.sql.impl.partitioner.FieldsRowPartitioner;
 import com.hazelcast.sql.impl.plan.Plan;
 import com.hazelcast.sql.impl.plan.PlanFragmentMapping;
 import com.hazelcast.sql.impl.plan.cache.PlanCacheKey;
 import com.hazelcast.sql.impl.plan.cache.PlanObjectKey;
+import com.hazelcast.sql.impl.plan.node.AggregatePlanNode;
 import com.hazelcast.sql.impl.plan.node.EmptyPlanNode;
 import com.hazelcast.sql.impl.plan.node.FetchOffsetPlanNodeFieldTypeProvider;
 import com.hazelcast.sql.impl.plan.node.FetchPlanNode;
@@ -64,9 +71,11 @@ import com.hazelcast.sql.impl.schema.map.AbstractMapTable;
 import com.hazelcast.sql.impl.schema.map.MapTableField;
 import com.hazelcast.sql.impl.type.QueryDataType;
 import org.apache.calcite.rel.RelFieldCollation;
+import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlAggFunction;
 
 import java.security.Permission;
 import java.util.ArrayDeque;
@@ -298,6 +307,36 @@ public class PlanCreateVisitor implements PhysicalRelVisitor {
     }
 
     @Override
+    public void onUnicastExchange(UnicastExchangePhysicalRel rel) {
+        // Get upstream node.
+        PlanNode upstreamNode = pollSingleUpstream();
+
+        // Create sender and push it as a fragment.
+        int edge = nextEdge();
+
+        int id = pollId(rel);
+
+        UnicastSendPlanNode sendNode = new UnicastSendPlanNode(
+            id,
+            upstreamNode,
+            edge,
+            new FieldsRowPartitioner(rel.getHashFields())
+        );
+
+        addFragment(sendNode, dataMemberMapping());
+
+        // Create receiver.
+        ReceivePlanNode receiveNode = new ReceivePlanNode(
+            id,
+            edge,
+            sendNode.getSchema().getTypes()
+        );
+
+        pushUpstream(receiveNode);
+    }
+
+
+    @Override
     public void onProject(ProjectPhysicalRel rel) {
         PlanNode upstreamNode = pollSingleUpstream();
 
@@ -398,6 +437,35 @@ public class PlanCreateVisitor implements PhysicalRelVisitor {
 
         pushUpstream(node);
     }
+
+    @Override
+    public void onAggregate(AggregatePhysicalRel rel) {
+        PlanNode upstreamNode = pollSingleUpstream();
+
+        List<Integer> groupKey = rel.getGroupSet().toList();
+        int sortedGroupKeySize = rel.getSortedGroupSet().toList().size();
+
+        List<AggregateCall> aggCalls = rel.getAggCallList();
+
+        List<AggregateExpression> aggAccumulators = new ArrayList<>();
+        for (AggregateCall aggCall : aggCalls) {
+            AggregateExpression aggAccumulator = convertAggregateCall(aggCall, upstreamNode.getSchema());
+
+            aggAccumulators.add(aggAccumulator);
+        }
+
+        AggregatePlanNode aggNode = new AggregatePlanNode(
+            pollId(rel),
+            upstreamNode,
+            groupKey,
+            aggAccumulators,
+            sortedGroupKeySize
+        );
+
+        pushUpstream(aggNode);
+    }
+
+
 
     @Override
     public void onValues(ValuesPhysicalRel rel) {
@@ -534,5 +602,49 @@ public class PlanCreateVisitor implements PhysicalRelVisitor {
         }
 
         return mappedRowType;
+    }
+
+    public static AggregateExpression convertAggregateCall(AggregateCall aggCall, PlanNodeSchema upstreamSchema) {
+        SqlAggFunction aggFunc = aggCall.getAggregation();
+        List<Integer> argList = aggCall.getArgList();
+
+        boolean distinct = aggCall.isDistinct();
+
+        switch (aggFunc.getKind()) {
+            case SUM:
+                return SumAggregateExpression.create(aggregateColumn(argList, 0, upstreamSchema), distinct);
+/*
+            case COUNT:
+                Expression operand;
+
+                if (argList.isEmpty()) {
+                    operand = CountRowExpression.INSTANCE;
+                } else {
+                    assert argList.size() == 1;
+
+                    operand = aggregateColumn(argList, 0, upstreamSchema);
+                }
+
+                return CountAggregateExpression.create(operand, distinct);
+
+            case MIN:
+                return MinAggregateExpression.create(aggregateColumn(argList, 0, upstreamSchema), distinct);
+
+            case MAX:
+                return MaxAggregateExpression.create(aggregateColumn(argList, 0, upstreamSchema), distinct);
+
+            case AVG:
+                return AverageAggregateExpression.create(aggregateColumn(argList, 0, upstreamSchema), distinct);
+*/
+            default:
+                throw QueryException.error("Unsupported aggregate call: " + aggFunc.getName());
+        }
+    }
+
+    private static ColumnExpression<?> aggregateColumn(List<Integer> argList, int index, PlanNodeSchema upstreamSchema) {
+        Integer columnIndex = argList.get(index);
+        QueryDataType columnType = upstreamSchema.getType(columnIndex);
+
+        return ColumnExpression.create(columnIndex, columnType);
     }
 }

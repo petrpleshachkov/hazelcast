@@ -24,6 +24,9 @@ import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 
+import java.util.Collections;
+import java.util.List;
+
 import static com.hazelcast.sql.impl.calcite.opt.distribution.DistributionType.ANY;
 import static com.hazelcast.sql.impl.calcite.opt.distribution.DistributionType.PARTITIONED;
 import static com.hazelcast.sql.impl.calcite.opt.distribution.DistributionType.REPLICATED;
@@ -163,7 +166,11 @@ public class DistributionTraitDef extends RelTraitDef<DistributionTrait> {
     }
 
     private DistributionTrait createTrait(DistributionType type) {
-        return new DistributionTrait(this, type);
+        return new DistributionTrait(this, type, Collections.emptyList());
+    }
+
+    public DistributionTrait createPartitionedTrait(List<Integer> fieldGroup) {
+        return new DistributionTrait(this, PARTITIONED, fieldGroup);
     }
 
     @Override

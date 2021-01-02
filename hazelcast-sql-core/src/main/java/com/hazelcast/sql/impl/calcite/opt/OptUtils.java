@@ -29,6 +29,8 @@ import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.RelSubset;
 import org.apache.calcite.prepare.RelOptTableImpl;
+import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.LogicalTableScan;
@@ -217,6 +219,16 @@ public final class OptUtils {
         assert rel.getCluster() instanceof HazelcastRelOptCluster;
 
         return (HazelcastRelOptCluster) rel.getCluster();
+    }
+
+    /**
+     * Get collation of the given node.
+     *
+     * @param rel Rel node.
+     * @return the collation
+     */
+    public static RelCollation getCollation(RelNode rel) {
+        return rel.getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
     }
 
     public static DistributionTraitDef getDistributionDef(RelNode rel) {

@@ -196,6 +196,11 @@ public class AbstractPlanNodesTest {
         }
 
         @Override
+        public void onAggregateNode(AggregatePlanNode node) {
+            nodes.add(node);
+        }
+
+        @Override
         public void onOtherNode(PlanNode node) {
             nodes.add(node);
         }

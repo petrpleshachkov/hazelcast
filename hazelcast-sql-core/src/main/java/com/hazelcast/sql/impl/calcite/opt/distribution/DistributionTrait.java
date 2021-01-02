@@ -20,6 +20,8 @@ import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelTrait;
 import org.apache.calcite.plan.RelTraitDef;
 
+import java.util.List;
+
 import static com.hazelcast.sql.impl.calcite.opt.distribution.DistributionType.ANY;
 import static com.hazelcast.sql.impl.calcite.opt.distribution.DistributionType.REPLICATED;
 import static com.hazelcast.sql.impl.calcite.opt.distribution.DistributionType.ROOT;
@@ -34,13 +36,22 @@ public class DistributionTrait implements RelTrait {
     /** Distribution type. */
     private final DistributionType type;
 
-    DistributionTrait(DistributionTraitDef traitDef, DistributionType type) {
+    /** Distribution fields. */
+    // TODO do we need nested, double check no nested
+    private final List<Integer> fieldGroup;
+
+    DistributionTrait(DistributionTraitDef traitDef, DistributionType type, List<Integer> fieldGroup) {
         this.traitDef = traitDef;
         this.type = type;
+        this.fieldGroup = fieldGroup;
     }
 
     public DistributionType getType() {
         return type;
+    }
+
+    public List<Integer> getFieldGroup() {
+        return fieldGroup;
     }
 
     @SuppressWarnings("rawtypes")
@@ -99,6 +110,10 @@ public class DistributionTrait implements RelTrait {
         }
 
         return false;
+    }
+
+    public int getMemberCount() {
+        return traitDef.getMemberCount();
     }
 
     @Override

@@ -44,7 +44,7 @@ public interface PlanNodeVisitor {
     void onMapIndexScanNode(MapIndexScanPlanNode node);
     void onReceiveSortMergeNode(ReceiveSortMergePlanNode node);
     void onFetchNode(FetchPlanNode node);
-
+    void onAggregateNode(AggregatePlanNode node);
 
     /**
      * Callback for a node without special handlers. For testing only.

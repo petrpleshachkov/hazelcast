@@ -81,5 +81,10 @@ public abstract class TestPlanNodeVisitorAdapter implements PlanNodeVisitor {
     public void onFetchNode(FetchPlanNode node) {
         // No-op.
     }
+
+    @Override
+    public void onAggregateNode(AggregatePlanNode node) {
+        // No-op.
+    }
 }
 

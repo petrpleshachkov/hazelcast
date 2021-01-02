@@ -58,7 +58,8 @@ public final class LogicalRules {
             ProjectLogicalRule.INSTANCE,
             ValuesLogicalRule.INSTANCE,
 
-            SortLogicalRule.INSTANCE
+            SortLogicalRule.INSTANCE,
+            AggregateLogicalRule.INSTANCE
         );
     }
 }
