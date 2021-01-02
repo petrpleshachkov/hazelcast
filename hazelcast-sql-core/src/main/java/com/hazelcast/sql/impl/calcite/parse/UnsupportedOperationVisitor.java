@@ -305,9 +305,6 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
     }
 
     private void processSelect(SqlSelect select) {
-        if (select.getGroup() != null && select.getGroup().size() > 0) {
-            throw unsupported(select.getGroup(), "GROUP BY");
-        }
     }
 
     private void processOther(SqlCall call) {
