@@ -22,11 +22,15 @@ import com.hazelcast.sql.impl.exec.IterationResult;
 import com.hazelcast.sql.impl.expression.aggregate.AggregateExpression;
 import com.hazelcast.sql.impl.row.EmptyRowBatch;
 import com.hazelcast.sql.impl.row.HeapRow;
+import com.hazelcast.sql.impl.row.ListRowBatch;
 import com.hazelcast.sql.impl.row.Row;
 import com.hazelcast.sql.impl.row.RowBatch;
+import com.hazelcast.sql.impl.worker.QueryFragmentContext;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Executor that performs local-only aggregation. If the input is already sorted properly on the group key, then
@@ -45,6 +49,17 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
      */
     // TODO: Use array instead?
     private final List<AggregateExpression> expressions;
+
+    /**
+     * Whether group key columns are already sorted.
+     */
+    private final boolean sorted;
+
+    /**
+     * Aggregated rows (for blocking mode).
+     */
+    // TODO: Use array for collectors?
+    private Map<AggregateKey, List<AggregateCollector>> map;
 
     /**
      * Number of columns.
@@ -79,10 +94,16 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
         this.expressions = expressions;
 
         // TODO: Currently we only do full sort of the whole key for the sake of simplicty.
-        // Throw an exception earlier otherwise
-        assert sortedGroupKeySize == groupKey.size();
+        this.sorted = sortedGroupKeySize == groupKey.size();
 
         columnCount = groupKey.size() + expressions.size();
+    }
+
+    @Override
+    protected void setup1(QueryFragmentContext ctx) {
+        if (!sorted) {
+            map = new HashMap<>();
+        }
     }
 
     @Override
@@ -108,17 +129,19 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
 
                 // Special handling of non-blocking mode: if the key has changed, replace old key/value pair with the
                 // one, and return the old one as a row.
-                if (singleKey == null) {
-                    singleKey = key;
-                    singleValues = values;
-                } else {
-                    if (singleKey != key) {
-                        curRow = createRowFromKeyAndValues(singleKey, singleValues);
-
+                if (sorted) {
+                    if (singleKey == null) {
                         singleKey = key;
                         singleValues = values;
+                    } else {
+                        if (singleKey != key) {
+                            curRow = createRowFromKeyAndValues(singleKey, singleValues);
 
-                        return IterationResult.FETCHED;
+                            singleKey = key;
+                            singleValues = values;
+
+                            return IterationResult.FETCHED;
+                        }
                     }
                 }
 
@@ -126,13 +149,17 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
 
             // Finalize the state if no more rows are expected.
             if (state.isDone()) {
-                if (singleKey == null) {
-                    curRow = EmptyRowBatch.INSTANCE;
-                } else {
-                    curRow = createRowFromKeyAndValues(singleKey, singleValues);
+                if (sorted) {
+                    if (singleKey == null) {
+                        curRow = EmptyRowBatch.INSTANCE;
+                    } else {
+                        curRow = createRowFromKeyAndValues(singleKey, singleValues);
 
-                    singleKey = null;
-                    singleValues = null;
+                        singleKey = null;
+                        singleValues = null;
+                    }
+                } else {
+                    curRow = createRows();
                 }
 
                 return IterationResult.FETCHED_DONE;
@@ -164,16 +191,55 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
     }
 
     /**
+     * Create final rows.
+     *
+     * @return Final rows.
+     */
+    private RowBatch createRows() {
+        // TODO: Avoid copying from map to that row list. Initial map should be the row batch in the first place!
+        int cnt = map.size();
+
+        if (cnt == 0) {
+            return EmptyRowBatch.INSTANCE;
+        } else {
+            List<Row> rows = new ArrayList<>(map.size());
+
+            for (Map.Entry<AggregateKey, List<AggregateCollector>> entry : map.entrySet()) {
+                Row row = createRowFromKeyAndValues(entry.getKey(), entry.getValue());
+
+                rows.add(row);
+            }
+
+            map.clear();
+
+            return new ListRowBatch(rows);
+        }
+    }
+
+
+    /**
      * Get values (collectors) for the given key.
      *
      * @param key Key.
      * @return Values.
      */
     private List<AggregateCollector> getValues(AggregateKey key) {
-        if (key == singleKey) {
-            return singleValues;
+        if (sorted) {
+            if (key == singleKey) {
+                return singleValues;
+            } else {
+                return createValues();
+            }
         } else {
-            return createValues();
+            List<AggregateCollector> res = map.get(key);
+
+            if (res == null) {
+                res = createValues();
+
+                map.put(key, res);
+            }
+
+            return res;
         }
     }
 
@@ -201,12 +267,17 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
      * @return Aggregation key.
      */
     private AggregateKey getKey(Row row) {
-        // In the sorted mode we perform comparison before allocating a new row. If the incoming row matches
-        // our expectations, we return already existing group key. Future comparison would be performed by
-        // referential equality only.
-        if (singleKey != null && singleKey.matches(row)) {
-            return singleKey;
+        if (sorted) {
+            // In the sorted mode we perform comparison before allocating a new row. If the incoming row matches
+            // our expectations, we return already existing group key. Future comparison would be performed by
+            // referential equality only.
+            if (singleKey != null && singleKey.matches(row)) {
+                return singleKey;
+            } else {
+                return createKey(row);
+            }
         } else {
+            // Otherwise we just create a new row which will be used to lookup aggregate values.
             return createKey(row);
         }
     }
@@ -247,6 +318,9 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
 /*
     @Override
     protected void reset1() {
+        if (map != null) {
+            map.clear();
+        }
         singleKey = null;
         singleValues = null;
 

@@ -21,14 +21,19 @@ import com.hazelcast.sql.impl.calcite.opt.OptUtils;
 import com.hazelcast.sql.impl.calcite.opt.distribution.DistributionTrait;
 import com.hazelcast.sql.impl.calcite.opt.distribution.DistributionTraitDef;
 import com.hazelcast.sql.impl.calcite.opt.logical.AggregateLogicalRel;
+import com.hazelcast.sql.impl.calcite.opt.logical.SortLogicalRel;
 import com.hazelcast.sql.impl.calcite.opt.physical.exchange.UnicastExchangePhysicalRel;
 import org.apache.calcite.plan.HazelcastRelOptCluster;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelTraitSet;
+import org.apache.calcite.rel.RelCollation;
+import org.apache.calcite.rel.RelCollationTraitDef;
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.util.ImmutableBitSet;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -59,20 +64,45 @@ public final class AggregatePhysicalRule extends RelOptRule {
             return;
         }
 
-        for (RelNode physicalInput : physicalInputs) {
-            RelNode newAgg = optimize(logicalAgg, physicalInput);
+        Collection<RelNode> transforms = getTransforms(logicalAgg, physicalInputs);
 
-            call.transformTo(newAgg);
+        for (RelNode transform : transforms) {
+            call.transformTo(transform);
         }
     }
 
-    /**
-     * Create an aggregate from the logical aggregate for the given physical input.
-     *
-     * @param logicalAgg    Logical aggregate.
-     * @param physicalInput Physical input.
-     * @return Physical aggregate.
-     */
+    private Collection<RelNode> getTransforms(AggregateLogicalRel logicalAgg, Collection<RelNode> physicalInputs) {
+        List<RelNode> localSortedRels = new ArrayList<>(1);
+        List<RelNode> noLocallySortRels = new ArrayList<>(1);
+
+        for (RelNode physicalInput : physicalInputs) {
+            // TODO filter out inputs without collation
+            RelCollation inputCollation = physicalInput.getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
+            boolean locallySorted = hasLocalSortForAggregate(logicalAgg.getGroupSet(), inputCollation);
+            RelNode newAgg = optimize(logicalAgg, physicalInput);
+
+            if (locallySorted) {
+                localSortedRels.add(newAgg);
+            } else {
+                noLocallySortRels.add(newAgg);
+            }
+        }
+        if (localSortedRels.size() > 0) {
+            return localSortedRels;
+        } else {
+            return noLocallySortRels;
+        }
+
+    }
+
+
+        /**
+         * Create an aggregate from the logical aggregate for the given physical input.
+         *
+         * @param logicalAgg    Logical aggregate.
+         * @param physicalInput Physical input.
+         * @return Physical aggregate.
+         */
     private static RelNode optimize(AggregateLogicalRel logicalAgg, RelNode physicalInput) {
         // 1. Get collation which will be applied to the local part of the aggregate.
         AggregateCollation localAggCollation = AggregateCollation.of(logicalAgg, physicalInput);
@@ -172,4 +202,21 @@ public final class AggregatePhysicalRule extends RelOptRule {
             ImmutableBitSet.of()
         );
     }
+
+    private static boolean hasLocalSortForAggregate(ImmutableBitSet aggGroupSet, RelCollation inputCollation) {
+        if (aggGroupSet.length() > inputCollation.getFieldCollations().size()) {
+            return false;
+        }
+
+        for (int i = 0; i < inputCollation.getFieldCollations().size(); i++) {
+            RelFieldCollation fieldCollation = inputCollation.getFieldCollations().get(i);
+            // TODO double check this
+            if (!aggGroupSet.get(fieldCollation.getFieldIndex())) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 }

@@ -24,6 +24,7 @@ import com.hazelcast.sql.impl.exec.aggregate.AggregateExec;
 import com.hazelcast.sql.impl.exec.fetch.FetchExec;
 import com.hazelcast.sql.impl.exec.io.ReceiveSortMergeExec;
 import com.hazelcast.sql.impl.exec.io.StripedInbox;
+import com.hazelcast.sql.impl.exec.io.UnicastSendExec;
 import com.hazelcast.sql.impl.exec.scan.index.MapIndexScanExec;
 import com.hazelcast.sql.impl.exec.io.InboundHandler;
 import com.hazelcast.sql.impl.exec.io.Inbox;
@@ -410,9 +411,29 @@ public class CreateExecPlanNodeVisitor implements PlanNodeVisitor {
     public void onUnicastSendNode(UnicastSendPlanNode node) {
         Outbox[] outboxes = prepareOutboxes(node);
 
-        assert outboxes.length == 1;
+        if (outboxes.length == 1) {
+            exec = new SendExec(node.getId(), pop(), outboxes[0]);
+        } else {
+            //TODO review
+            int[] partitionOutboxIndexes = new int[localParts.getPartitionCount()];
 
-        exec = new SendExec(node.getId(), pop(), outboxes[0]);
+            for (int outboxIndex = 0; outboxIndex < outboxes.length; outboxIndex++) {
+                final int outboxIndex0 = outboxIndex;
+
+                PartitionIdSet partitions = operation.getPartitionMap().get(outboxes[outboxIndex0].getTargetMemberId());
+
+                partitions.forEach((part) -> partitionOutboxIndexes[part] = outboxIndex0);
+            }
+
+            exec = new UnicastSendExec(
+                node.getId(),
+                pop(),
+                outboxes,
+                node.getPartitioner(),
+                partitionOutboxIndexes,
+                serializationService
+            );
+        }
     }
 
     @Override

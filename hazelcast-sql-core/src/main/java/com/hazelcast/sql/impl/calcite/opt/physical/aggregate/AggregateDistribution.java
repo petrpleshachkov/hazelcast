@@ -109,6 +109,9 @@ public final class AggregateDistribution {
      * @return {@code true} if this aggregate could be processed in collocated mode.
      */
     private static boolean isCollocated(ImmutableBitSet aggGroupSet, List<Integer> inputFieldGroup) {
+        return false;
+        // TODO it seems it should be other way around
+/*
         // If group set size is less than the number of input distribution fields, then dist fields could not be a
         // prefix of group by definition.
         if (aggGroupSet.length() < inputFieldGroup.size()) {
@@ -125,6 +128,8 @@ public final class AggregateDistribution {
         }
 
         return true;
+
+ */
     }
 
     public boolean isCollocated() {
