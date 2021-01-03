@@ -177,8 +177,8 @@ public class SqlAggregateTest extends SqlTestSupport {
 //        String sql = "SELECT " + intValField + ", " + bigIntValField + " FROM " + mapName()
 //            + " ORDER BY " + bigIntValField + " OFFSET 4096 FETCH NEXT 5 ROWS ONLY\n";
 
-        String sql = "SELECT " + 5 + ", " + bigIntValField + ", SUM(bigIntVal)" + " FROM " + mapName()
-            + " GROUP BY " + bigIntValField;;// + " HAVING bigIntVal > 5";
+        String sql = "SELECT " + 5 + ", " + bigIntValField + ", " + intValField + " FROM " + mapName()
+            + " GROUP BY " + bigIntValField + ", " + intValField + " HAVING bigIntVal > 5";
 
 
         try (SqlResult res = query(sql)) {

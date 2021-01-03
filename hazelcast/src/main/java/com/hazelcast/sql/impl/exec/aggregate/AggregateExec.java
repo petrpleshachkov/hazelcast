@@ -314,8 +314,6 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
         return curRow;
     }
 
-    // TODO do we need this?
-/*
     @Override
     protected void reset1() {
         if (map != null) {
@@ -326,6 +324,4 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
 
         curRow = null;
     }
-    */
-
 }
