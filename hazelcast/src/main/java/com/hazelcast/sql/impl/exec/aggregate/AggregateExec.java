@@ -47,8 +47,7 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
     /**
      * Expressions.
      */
-    // TODO: Use array instead?
-    private final List<AggregateExpression> expressions;
+    private final AggregateExpression[] expressions;
 
     /**
      * Whether group key columns are already sorted.
@@ -58,8 +57,7 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
     /**
      * Aggregated rows (for blocking mode).
      */
-    // TODO: Use array for collectors?
-    private Map<AggregateKey, List<AggregateCollector>> map;
+    private Map<AggregateKey, AggregateCollector[]> map;
 
     /**
      * Number of columns.
@@ -74,7 +72,7 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
     /**
      * Current single values (for non-blocking mode).
      */
-    private List<AggregateCollector> singleValues;
+    private AggregateCollector[] singleValues;
 
     /**
      * Current row.
@@ -85,7 +83,7 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
         int id,
         Exec upstream,
         List<Integer> groupKey,
-        List<AggregateExpression> expressions,
+        AggregateExpression[] expressions,
         int sortedGroupKeySize
     ) {
         super(id, upstream);
@@ -96,7 +94,7 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
         // TODO: Currently we only do full sort of the whole key for the sake of simplicty.
         this.sorted = sortedGroupKeySize == groupKey.size();
 
-        columnCount = groupKey.size() + expressions.size();
+        columnCount = groupKey.size() + expressions.length;
     }
 
     @Override
@@ -117,12 +115,12 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
             for (Row upstreamRow : state) {
                 // Prepare key and value.
                 AggregateKey key = getKey(upstreamRow);
-                List<AggregateCollector> values = getValues(key);
+                AggregateCollector[] values = getValues(key);
 
                 // Accumulate.
-                for (int i = 0; i < expressions.size(); i++) {
-                    AggregateExpression expression = expressions.get(i);
-                    AggregateCollector value = values.get(i);
+                for (int i = 0; i < expressions.length; i++) {
+                    AggregateExpression expression = expressions[i];
+                    AggregateCollector value = values[i];
 
                     expression.collect(upstreamRow, value, ctx);
                 }
@@ -174,7 +172,7 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
      * @param values Values.
      * @return Values.
      */
-    private HeapRow createRowFromKeyAndValues(AggregateKey key, List<AggregateCollector> values) {
+    private HeapRow createRowFromKeyAndValues(AggregateKey key, AggregateCollector[] values) {
         HeapRow res = new HeapRow(columnCount);
 
         int idx = 0;
@@ -204,7 +202,7 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
         } else {
             List<Row> rows = new ArrayList<>(map.size());
 
-            for (Map.Entry<AggregateKey, List<AggregateCollector>> entry : map.entrySet()) {
+            for (Map.Entry<AggregateKey, AggregateCollector[]> entry : map.entrySet()) {
                 Row row = createRowFromKeyAndValues(entry.getKey(), entry.getValue());
 
                 rows.add(row);
@@ -223,7 +221,7 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
      * @param key Key.
      * @return Values.
      */
-    private List<AggregateCollector> getValues(AggregateKey key) {
+    private AggregateCollector[] getValues(AggregateKey key) {
         if (sorted) {
             if (key == singleKey) {
                 return singleValues;
@@ -231,7 +229,7 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
                 return createValues();
             }
         } else {
-            List<AggregateCollector> res = map.get(key);
+            AggregateCollector[] res = map.get(key);
 
             if (res == null) {
                 res = createValues();
@@ -248,13 +246,12 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
      *
      * @return Values.
      */
-    private List<AggregateCollector> createValues() {
-        int cnt = expressions.size();
+    private AggregateCollector[] createValues() {
+        AggregateCollector[] res = new AggregateCollector[expressions.length];
 
-        List<AggregateCollector> res = new ArrayList<>(cnt);
-
-        for (AggregateExpression expression : expressions) {
-            res.add(expression.newCollector(ctx));
+        for (int i = 0; i < expressions.length; ++i) {
+            AggregateExpression expression = expressions[i];
+            res[i] = expression.newCollector(ctx);
         }
 
         return res;
@@ -314,6 +311,8 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
         return curRow;
     }
 
+    //TODO do we need this?
+/*
     @Override
     protected void reset1() {
         if (map != null) {
@@ -324,4 +323,6 @@ public class AggregateExec extends AbstractUpstreamAwareExec {
 
         curRow = null;
     }
+
+ */
 }

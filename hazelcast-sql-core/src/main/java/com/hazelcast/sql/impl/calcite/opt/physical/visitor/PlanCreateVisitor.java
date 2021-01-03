@@ -447,11 +447,12 @@ public class PlanCreateVisitor implements PhysicalRelVisitor {
 
         List<AggregateCall> aggCalls = rel.getAggCallList();
 
-        List<AggregateExpression> aggAccumulators = new ArrayList<>();
-        for (AggregateCall aggCall : aggCalls) {
-            AggregateExpression aggAccumulator = convertAggregateCall(aggCall, upstreamNode.getSchema());
+        AggregateExpression[] aggAccumulators = new AggregateExpression[aggCalls.size()];
 
-            aggAccumulators.add(aggAccumulator);
+        for (int i=0; i< aggCalls.size(); ++i) {
+            AggregateCall aggCall = aggCalls.get(i);
+            AggregateExpression aggAccumulator = convertAggregateCall(aggCall, upstreamNode.getSchema());
+            aggAccumulators[i] = aggAccumulator;
         }
 
         AggregatePlanNode aggNode = new AggregatePlanNode(

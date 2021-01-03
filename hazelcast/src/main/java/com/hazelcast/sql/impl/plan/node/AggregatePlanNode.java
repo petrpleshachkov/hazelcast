@@ -26,6 +26,7 @@ import com.hazelcast.sql.impl.type.QueryDataType;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -41,7 +42,7 @@ public class AggregatePlanNode extends UniInputPlanNode implements IdentifiedDat
     /**
      * Accumulators.
      */
-    private List<AggregateExpression> expressions;
+    private AggregateExpression[] expressions;
 
     /**
      * Whether group key is already sorted, and hence blocking behavior is not needed.
@@ -56,7 +57,7 @@ public class AggregatePlanNode extends UniInputPlanNode implements IdentifiedDat
         int id,
         PlanNode upstream,
         List<Integer> groupKey,
-        List<AggregateExpression> expressions,
+        AggregateExpression[] expressions,
         int sortedGroupKeySize
     ) {
         super(id, upstream);
@@ -74,7 +75,7 @@ public class AggregatePlanNode extends UniInputPlanNode implements IdentifiedDat
         return groupKey;
     }
 
-    public List<AggregateExpression> getExpressions() {
+    public AggregateExpression[] getExpressions() {
         return expressions;
     }
 
@@ -90,7 +91,7 @@ public class AggregatePlanNode extends UniInputPlanNode implements IdentifiedDat
     @SuppressWarnings("rawtypes")
     @Override
     public PlanNodeSchema getSchema0() {
-        List<QueryDataType> types = new ArrayList<>(groupKey.size() + expressions.size());
+        List<QueryDataType> types = new ArrayList<>(groupKey.size() + expressions.length);
 
         PlanNodeSchema upstreamSchema = upstream.getSchema();
 
@@ -108,14 +109,21 @@ public class AggregatePlanNode extends UniInputPlanNode implements IdentifiedDat
     @Override
     public void writeData1(ObjectDataOutput out) throws IOException {
         SerializationUtil.writeList(groupKey, out);
-        SerializationUtil.writeList(expressions, out);
+        out.writeInt(expressions.length);
+        for (int i = 0; i < expressions.length; ++i) {
+            out.writeObject(expressions[i]);
+        }
         out.writeInt(sortedGroupKeySize);
     }
 
     @Override
     public void readData1(ObjectDataInput in) throws IOException {
         groupKey = SerializationUtil.readList(in);
-        expressions = SerializationUtil.readList(in);
+        int expressionsLen = in.readInt();
+        expressions = new AggregateExpression[expressionsLen];
+        for (int i=0; i< expressionsLen; ++i) {
+            expressions[i] = in.readObject();
+        }
         sortedGroupKeySize = in.readInt();
     }
 
@@ -147,7 +155,7 @@ public class AggregatePlanNode extends UniInputPlanNode implements IdentifiedDat
         AggregatePlanNode that = (AggregatePlanNode) o;
 
         return id == that.id && upstream.equals(that.upstream) && Objects.equals(groupKey, that.groupKey)
-            && expressions.equals(that.expressions) && sortedGroupKeySize == that.sortedGroupKeySize;
+            && Arrays.equals(expressions, that.expressions) && sortedGroupKeySize == that.sortedGroupKeySize;
     }
 
     @Override
