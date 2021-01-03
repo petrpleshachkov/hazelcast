@@ -108,6 +108,9 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         SUPPORTED_KINDS.add(SqlKind.LIKE);
         SUPPORTED_KINDS.add(SqlKind.TRIM);
 
+        // TODO review
+        SUPPORTED_KINDS.add(SqlKind.SUM);
+
         // Supported operators
         SUPPORTED_OPERATORS = new HashSet<>();
 
@@ -148,6 +151,8 @@ public final class UnsupportedOperationVisitor implements SqlVisitor<Void> {
         // Sorting
         SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.DESC);
 
+        // Aggregates
+        SUPPORTED_OPERATORS.add(HazelcastSqlOperatorTable.SUM);
     }
 
     private final SqlValidatorCatalogReader catalogReader;

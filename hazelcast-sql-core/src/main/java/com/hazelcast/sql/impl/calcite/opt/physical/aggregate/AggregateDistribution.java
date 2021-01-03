@@ -21,6 +21,7 @@ import com.hazelcast.sql.impl.calcite.opt.distribution.DistributionTrait;
 import com.hazelcast.sql.impl.calcite.opt.distribution.DistributionTraitDef;
 import com.hazelcast.sql.impl.calcite.opt.distribution.DistributionType;
 import com.hazelcast.sql.impl.calcite.opt.logical.AggregateLogicalRel;
+import org.apache.calcite.rel.RelFieldCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.util.ImmutableBitSet;
 
@@ -102,34 +103,27 @@ public final class AggregateDistribution {
 
     /**
      * Check whether the given group set could be executed in collocated mode for the given distribution fields of
-     * partitioned input. This is the case iff input distribution fields are a prefix of the group set.
+     * partitioned input. This is the case iff the group set is a prefix of the input distribution fields.
      *
      * @param aggGroupSet     Group set of original aggregate.
      * @param inputFieldGroup Field group.
      * @return {@code true} if this aggregate could be processed in collocated mode.
      */
     private static boolean isCollocated(ImmutableBitSet aggGroupSet, List<Integer> inputFieldGroup) {
-        return false;
-        // TODO it seems it should be other way around
-/*
-        // If group set size is less than the number of input distribution fields, then dist fields could not be a
-        // prefix of group by definition.
-        if (aggGroupSet.length() < inputFieldGroup.size()) {
-            // GROUP BY has less attributes than the number of distribution fields. It means that at least one distribution field
-            // will be lost, no need to continue.
+        // If group set size is greater than the number of input distribution fields, then the group set could not be a
+        // prefix of the input distribution fields.
+        if (aggGroupSet.length() > inputFieldGroup.size()) {
             return false;
         }
 
-        for (int i = 0; i < inputFieldGroup.size(); i++) {
-            if (!aggGroupSet.get(i)) {
-                // GROUP BY doesn't contain input distribution field. Distribution is lost.
+        for (int i = 0; i < aggGroupSet.length(); ++i) {
+            // TODO review, is it correct
+            if (!aggGroupSet.get(inputFieldGroup.get(i))) {
                 return false;
             }
         }
 
         return true;
-
- */
     }
 
     public boolean isCollocated() {

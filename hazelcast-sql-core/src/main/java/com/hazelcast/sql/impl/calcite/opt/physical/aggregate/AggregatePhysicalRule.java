@@ -76,7 +76,6 @@ public final class AggregatePhysicalRule extends RelOptRule {
         List<RelNode> noLocallySortRels = new ArrayList<>(1);
 
         for (RelNode physicalInput : physicalInputs) {
-            // TODO filter out inputs without collation
             RelCollation inputCollation = physicalInput.getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
             boolean locallySorted = hasLocalSortForAggregate(logicalAgg.getGroupSet(), inputCollation);
             RelNode newAgg = optimize(logicalAgg, physicalInput);
@@ -96,13 +95,13 @@ public final class AggregatePhysicalRule extends RelOptRule {
     }
 
 
-        /**
-         * Create an aggregate from the logical aggregate for the given physical input.
-         *
-         * @param logicalAgg    Logical aggregate.
-         * @param physicalInput Physical input.
-         * @return Physical aggregate.
-         */
+    /**
+     * Create an aggregate from the logical aggregate for the given physical input.
+     *
+     * @param logicalAgg    Logical aggregate.
+     * @param physicalInput Physical input.
+     * @return Physical aggregate.
+     */
     private static RelNode optimize(AggregateLogicalRel logicalAgg, RelNode physicalInput) {
         // 1. Get collation which will be applied to the local part of the aggregate.
         AggregateCollation localAggCollation = AggregateCollation.of(logicalAgg, physicalInput);
@@ -208,9 +207,8 @@ public final class AggregatePhysicalRule extends RelOptRule {
             return false;
         }
 
-        for (int i = 0; i < inputCollation.getFieldCollations().size(); i++) {
+        for (int i = 0; i < aggGroupSet.length(); ++i) {
             RelFieldCollation fieldCollation = inputCollation.getFieldCollations().get(i);
-            // TODO double check this
             if (!aggGroupSet.get(fieldCollation.getFieldIndex())) {
                 return false;
             }

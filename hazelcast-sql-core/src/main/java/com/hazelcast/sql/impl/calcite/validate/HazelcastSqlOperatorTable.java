@@ -16,6 +16,7 @@
 
 package com.hazelcast.sql.impl.calcite.validate;
 
+import com.hazelcast.sql.impl.calcite.validate.operators.aggregate.HazelcastSumFunction;
 import com.hazelcast.sql.impl.calcite.validate.operators.math.HazelcastAbsFunction;
 import com.hazelcast.sql.impl.calcite.validate.operators.math.HazelcastDoubleFunction;
 import com.hazelcast.sql.impl.calcite.validate.operators.math.HazelcastFloorCeilFunction;
@@ -168,6 +169,12 @@ public final class HazelcastSqlOperatorTable extends ReflectiveSqlOperatorTable 
     public static final SqlFunction UPPER = HazelcastStringFunction.UPPER;
 
     public static final SqlPostfixOperator DESC = HazelcastDescOperator.DESC;
+
+    //#endregion
+
+    //#region aggregate functions.
+
+    public static final SqlFunction SUM = HazelcastSumFunction.SUM;
 
     //#endregion
 
